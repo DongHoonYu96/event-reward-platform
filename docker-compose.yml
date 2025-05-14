@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports:
+      - "${MONGO_PORT}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - event-network
+
+  gateway-server:
+    build:
+      context: ./gateway-server
+      dockerfile: Dockerfile
+    container_name: gateway-server
+    restart: no
+    ports:
+      - "${GATEWAY_PORT}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_SERVICE_URL=http://auth-server:3001
+      - EVENT_SERVICE_URL=http://event-server:3002
+    depends_on:
+      - mongodb
+    networks:
+      - event-network
+
+  auth-server:
+    build:
+      context: ./auth-server
+      dockerfile: Dockerfile
+    container_name: auth-server
+    restart: no
+    ports:
+      - "${AUTH_PORT}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongodb
+    networks:
+      - event-network
+
+  event-server:
+    build:
+      context: ./event-server
+      dockerfile: Dockerfile
+    container_name: event-server
+    restart: no
+    ports:
+      - "${EVENT_PORT}:3002"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongodb
+    networks:
+      - event-network
+
+networks:
+  event-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
