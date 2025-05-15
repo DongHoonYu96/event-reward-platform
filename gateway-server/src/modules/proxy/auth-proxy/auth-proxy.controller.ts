@@ -9,8 +9,6 @@ import {
     Post,
     Get,
     Logger,
-    HttpStatus,
-    HttpException,
     Inject
 } from '@nestjs/common';
 
@@ -21,7 +19,7 @@ import { IsPublic } from "../../../common/decorators/is-public.decorator";
 import { Roles, UserRole } from "../../../common/decorators/roles.decorator";
 import { ClientProxy } from "@nestjs/microservices";
 
-@Controller('auth')
+@Controller('AUTH_SERVICE')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AuthProxyController {
     private readonly logger = new Logger(AuthProxyController.name);
@@ -38,13 +36,13 @@ export class AuthProxyController {
     }
 
     @IsPublic()
-    @Post('login')
+    @Post('users/login')
     async login(@Body() body) {
         return this.authProxy.send({ cmd: 'login' }, body);
     }
 
     @IsPublic()
-    @Post('register')
+    @Post('users/register')
     async register(@Body() body) {
         return this.authProxy.send({ cmd: 'register' }, body);
     }
@@ -57,15 +55,11 @@ export class AuthProxyController {
     }
 
     @Roles(UserRole.ADMIN)
-    @All('users*')
-    adminUserRoutes(@Req() req, @Body() body, @Headers() headers, @Query() query) {
-        const path = req.url.replace(/^\/auth\//, '');
-        return this.authProxyService.forwardRequest(
-            req.method,
-            path,
-            body,
-            this.addUserToHeaders(req, headers),
-            query,
+    @Get('users/admin-only')
+    adminOnly(@Req() req) {
+        return this.authProxy.send(
+            { cmd: 'admin_only' },
+            { userId: req.user.userId, role: req.user.role }
         );
     }
 
