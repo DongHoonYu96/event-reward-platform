@@ -1,18 +1,6 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Param,
-    Request,
-    Query,
-    Put,
-    Inject
-} from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { RolesGuard } from "../../../common/guards/roles.guard";
-import { IsPublic } from "../../../common/decorators/is-public.decorator";
-import { Roles, UserRole } from "../../../common/decorators/roles.decorator";
+import {Body, Controller, Get, Inject, Param, Post, Put, Query, Request} from '@nestjs/common';
+import {ClientProxy} from '@nestjs/microservices';
+import {Roles, UserRole} from "../../../common/decorators/roles.decorator";
 
 @Controller('EVENT-SERVICE/claims')
 export class ClaimsProxyController {
@@ -30,6 +18,7 @@ export class ClaimsProxyController {
     }
 
     @Get()
+    @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.AUDITOR)
     findAll(
         @Query('status') status: string,
         @Query('eventId') eventId: string,
