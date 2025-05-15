@@ -36,17 +36,20 @@ export class AuthProxyController {
     @HttpCode(HttpStatus.OK)
     @Post('users/login')
     async login(@Body() body) {
+        this.logger.log(`Login attempt: ${body.username}`);
         return this.authProxy.send({ cmd: 'login' }, body);
     }
 
     @IsPublic()
     @Post('users/register')
     async register(@Body() body) {
+        this.logger.log(`Register user: ${body.username}`);
         return this.authProxy.send({ cmd: 'register' }, body);
     }
 
     @Get('users/profile')
     async getProfile(@Req() req) {
+        this.logger.log(`Get profile for user: ${req.user.userId}`);
         return this.authProxy.send(
             { cmd: 'get_profile' },req.user.userId
         );
@@ -55,6 +58,7 @@ export class AuthProxyController {
     @Roles(UserRole.ADMIN)
     @Get('users/admin-only')
     adminOnly(@Req() req) {
+        this.logger.log(`Admin only access from: ${req.user.userId}`);
         return this.authProxy.send(
             { cmd: 'admin_only' },
             { userId: req.user.userId, role: req.user.role }

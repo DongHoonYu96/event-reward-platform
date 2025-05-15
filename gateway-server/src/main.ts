@@ -28,6 +28,6 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT', 8080);
   await app.listen(port);
-  console.log(`Gateway Server is running on port ${port}`);
+  logger.log(`Gateway Server is running on port ${port}`);
 }
 bootstrap();

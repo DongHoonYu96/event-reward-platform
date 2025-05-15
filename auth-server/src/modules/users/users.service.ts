@@ -10,8 +10,8 @@ import { User, UserRole } from './schemas/user.schema';
 @Injectable()
 export class UsersService {
     constructor(
-        @InjectModel(User.name) private userModel: Model<User>,
-        private jwtService: JwtService,
+        @InjectModel(User.name) private readonly userModel: Model<User>,
+        private readonly jwtService: JwtService,
     ) {}
 
     async create(createUserDto: CreateUserDto): Promise<User> {

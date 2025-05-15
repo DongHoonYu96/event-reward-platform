@@ -22,7 +22,7 @@ async function bootstrap() {
   // await app.listen(port);
 
   Logger.log(
-      `🚀 Application is running on: TCP ${JSON.stringify(
+      `🚀 Auth Application is running on: TCP ${JSON.stringify(
           options,
       )} with http ${port} port`,
       'bootstrap-hybrid',
