@@ -9,6 +9,51 @@ NestJS + MSA + MongoDB 기반의 이벤트/보상 관리 시스템입니다.
 1. **Gateway Server**: 모든 API 진입점, JWT 검증 및 역할(Role) 검사
 2. **Auth Server**: 사용자 관리, 인증, JWT 발급
 3. **Event Server**: 이벤트 관리, 보상 관리, 조건 검증
+```mermaid
+flowchart TB
+    subgraph "클라이언트"
+        Client[클라이언트]
+    end
+
+    subgraph "Gateway Server"
+        GW[API Gateway]
+        GAUTH[인증/권한 검증]
+        GROUTE[라우팅]
+    end
+
+    subgraph "Auth Server"
+        AUTH[인증 서버]
+        USER_DB[(사용자 DB)]
+        JWT[JWT 관리]
+        ROLE[역할 관리]
+    end
+
+    subgraph "Event Server"
+        EVENT[이벤트 관리]
+        REWARD[보상 관리]
+        REQ[보상 요청 처리]
+        EVENT_DB[(이벤트/보상 DB)]
+    end
+
+    Client --> GW
+    GW --> GAUTH
+    GAUTH --> GROUTE
+    
+    GROUTE --> AUTH
+    GROUTE --> EVENT
+    
+    AUTH --> USER_DB
+    AUTH --> JWT
+    AUTH --> ROLE
+    
+    EVENT --> EVENT_DB
+    EVENT --> REWARD
+    EVENT --> REQ
+    
+    %% 통신 방식
+    GROUTE -- "HTTP 또는 TCP 또는 메시지 큐" --> AUTH
+    GROUTE -- "HTTP 또는 TCP 또는 메시지 큐" --> EVENT
+```
 
 ## 실행 방법
 
