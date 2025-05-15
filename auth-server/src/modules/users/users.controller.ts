@@ -1,21 +1,17 @@
-import {Body, Controller, Get, Logger, Post, Req, UseGuards} from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from './schemas/user.schema';
-import {IsPublic} from "../../common/decorators/is-public.decorator";
+import { MessagePattern } from '@nestjs/microservices';
 
 @Controller('users')
 export class UsersController {
     private readonly logger = new Logger(UsersController.name);
     constructor(private readonly usersService: UsersService) {}
 
-    @Post('register')
-    @IsPublic()
-    async register(@Body() createUserDto: CreateUserDto) {
+    @MessagePattern({ cmd: 'register' })
+    async register(createUserDto: CreateUserDto) {
+        this.logger.log(`Register user: ${createUserDto.username}`);
         const user = await this.usersService.create(createUserDto);
         return {
             id: user._id,
@@ -25,23 +21,24 @@ export class UsersController {
         };
     }
 
-    @Post('login')
-    @IsPublic()
-    async login(@Body() loginUserDto: LoginUserDto) {
-        this.logger.log(`[UsersController] login: ${loginUserDto.username}`);
+    @MessagePattern({ cmd: 'login' })
+    async login(loginUserDto: LoginUserDto) {
+        this.logger.log(`Login attempt: ${loginUserDto.username}`);
         return this.usersService.login(loginUserDto);
     }
 
-    @Get('profile')
-    // @UseGuards(JwtAuthGuard)
-    async getProfile(@Req() req) {
-        return this.usersService.findOne(req.user.userId);
+    @MessagePattern({ cmd: 'get_profile' })
+    async getProfile(userId: string) {
+        this.logger.log(`Get profile for user: ${userId}`);
+        return this.usersService.findOne(userId);
     }
 
-    @Get('admin-only')
-    @UseGuards(RolesGuard)
-    @Roles(UserRole.ADMIN)
-    adminOnly() {
+    @MessagePattern({ cmd: 'admin_only' })
+    async adminOnly(data: { userId: string, role: string }) {
+        this.logger.log(`Admin only access from: ${data.userId}`);
+        if (data.role !== 'ADMIN') {
+            return { error: 'Access denied', statusCode: 403 };
+        }
         return { message: 'top secret' };
     }
 }

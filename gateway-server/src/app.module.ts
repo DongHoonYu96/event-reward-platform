@@ -6,6 +6,14 @@ import {JwtAuthGuard} from "./common/guards/jwt-auth.guard";
 import {PassportModule} from "@nestjs/passport";
 import {JwtStrategy} from "./modules/strategies/jwt.strategy";
 import {AuthProxyModule} from "./modules/proxy/auth-proxy/auth-proxy.module";
+import {
+  ClientOptions,
+  ClientProxyFactory,
+  ClientsModule,
+  TcpClientOptions,
+  TcpOptions,
+  Transport
+} from "@nestjs/microservices";
 
 @Module({
   imports: [

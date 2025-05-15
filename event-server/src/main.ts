@@ -15,8 +15,8 @@ async function bootstrap() {
 
   app.enableCors();
 
-  const port = configService.get<number>('PORT', 3001);
+  const port = configService.get<number>('PORT', 3002);
   await app.listen(port);
-  console.log(`Auth Server is running on port ${port}`);
+  console.log(`Event Server is running on port ${port}`);
 }
 bootstrap();

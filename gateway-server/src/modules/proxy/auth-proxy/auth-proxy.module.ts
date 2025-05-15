@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import {AuthProxyController} from "./auth-proxy.controller";
 import {AuthProxyService} from "./auth-proxy.service";
+import {ClientsModule, Transport} from "@nestjs/microservices";
 
 @Module({
     imports: [
@@ -13,6 +14,19 @@ import {AuthProxyService} from "./auth-proxy.service";
                 maxRedirects: configService.get('HTTP_MAX_REDIRECTS', 5),
             }),
         }),
+        ClientsModule.registerAsync([
+            {
+                name: 'AUTH_SERVICE',
+                inject: [ConfigService],
+                useFactory: (configService: ConfigService) => ({
+                    transport: Transport.TCP,
+                    options: {
+                        host: configService.get('AUTH_SERVICE_HOST'),
+                        port: +configService.get('AUTH_SERVICE_PORT'), //
+                    },
+                }),
+            },
+        ]),
     ],
     controllers: [AuthProxyController],
     providers: [
