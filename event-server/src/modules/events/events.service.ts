@@ -9,7 +9,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 @Injectable()
 export class EventsService {
     constructor(
-        @InjectModel(Event.name) private eventModel: Model<Event>,
+        @InjectModel(Event.name) private readonly eventModel: Model<Event>,
     ) {}
 
     async create(createEventDto: CreateEventDto, userId: string): Promise<Event> {
