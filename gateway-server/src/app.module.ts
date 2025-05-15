@@ -1,13 +1,11 @@
-// src/app.module.ts
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import {APP_GUARD} from "@nestjs/core";
 import {JwtAuthGuard} from "./common/guards/jwt-auth.guard";
-import mongoose from "mongoose";
 import {PassportModule} from "@nestjs/passport";
 import {JwtStrategy} from "./modules/strategies/jwt.strategy";
+import {AuthProxyModule} from "./modules/proxy/auth-proxy/auth-proxy.module";
 
 @Module({
   imports: [
@@ -25,6 +23,7 @@ import {JwtStrategy} from "./modules/strategies/jwt.strategy";
         },
       }),
     }),
+    AuthProxyModule
   ],
   providers: [
     JwtStrategy,

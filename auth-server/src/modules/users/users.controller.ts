@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Post, Req, UseGuards} from '@nestjs/common';
+import {Body, Controller, Get, Logger, Post, Req, UseGuards} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -10,6 +10,7 @@ import {IsPublic} from "../../common/decorators/is-public.decorator";
 
 @Controller('users')
 export class UsersController {
+    private readonly logger = new Logger(UsersController.name);
     constructor(private readonly usersService: UsersService) {}
 
     @Post('register')
@@ -27,6 +28,7 @@ export class UsersController {
     @Post('login')
     @IsPublic()
     async login(@Body() loginUserDto: LoginUserDto) {
+        this.logger.log(`[UsersController] login: ${loginUserDto.username}`);
         return this.usersService.login(loginUserDto);
     }
 
