@@ -1,43 +1,42 @@
-import { Controller, Get, Post, Body, Param, Request, Query, Put } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ClaimsService } from './claims.service';
 import { CreateClaimDto } from './dto/create-claim.dto';
 import { ProcessClaimDto } from './dto/process-claim.dto';
 import { ClaimStatus } from './schemas/claim.schema';
 
-@Controller('claims')
+@Controller()
 export class ClaimsController {
     constructor(private readonly claimsService: ClaimsService) {}
 
-    @Post()
-    create(@Body() createClaimDto: CreateClaimDto, @Request() req) {
-        return this.claimsService.create(createClaimDto, req.user?.userId);
+    @MessagePattern({ cmd: 'create_claim' })
+    create(@Payload() data: { createClaimDto: CreateClaimDto; userId: string }) {
+        return this.claimsService.create(data.createClaimDto, data.userId);
     }
 
-    @Get()
-    findAll(
-        @Query('status') status: ClaimStatus,
-        @Query('eventId') eventId: string,
-        @Query('userId') userId: string,
-    ) {
-        return this.claimsService.findAll(status, eventId, userId);
+    @MessagePattern({ cmd: 'find_all_claims' })
+    findAll(@Payload() data: { status?: ClaimStatus; eventId?: string; userId?: string }) {
+        return this.claimsService.findAll(data.status, data.eventId, data.userId);
     }
 
-    @Get('my')
-    findMyClams(@Request() req) {
-        return this.claimsService.findByUser(req.user?.userId);
+    @MessagePattern({ cmd: 'find_my_claims' })
+    findMyClams(@Payload() userId: string) {
+        return this.claimsService.findByUser(userId);
     }
 
-    @Get(':id')
-    findOne(@Param('id') id: string, @Request() req) {
-        return this.claimsService.findOne(id, req.user);
+    @MessagePattern({ cmd: 'find_one_claim' })
+    findOne(@Payload() data: { id: string; user: any }) {
+        return this.claimsService.findOne(data.id, data.user);
     }
 
-    @Put(':id/make-decision')
+    @MessagePattern({ cmd: 'make_decision_on_claim' })
     makeDecisionOnClaim(
-        @Param('id') id: string,
-        @Body() processClaimDto: ProcessClaimDto,
-        @Request() req,
+        @Payload() data: { id: string; processClaimDto: ProcessClaimDto; userId: string }
     ) {
-        return this.claimsService.makeDecisionOnClaim(id, processClaimDto, req.user?.userId);
+        return this.claimsService.makeDecisionOnClaim(
+            data.id,
+            data.processClaimDto,
+            data.userId
+        );
     }
 }

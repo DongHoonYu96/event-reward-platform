@@ -7,6 +7,7 @@ import {PassportModule} from "@nestjs/passport";
 import {JwtStrategy} from "./modules/strategies/jwt.strategy";
 import {AuthProxyModule} from "./modules/proxy/auth-proxy/auth-proxy.module";
 import {RolesGuard} from "./common/guards/roles.guard";
+import {EventProxyModule} from "./modules/proxy/event-proxy/event-proxy.module";
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import {RolesGuard} from "./common/guards/roles.guard";
         },
       }),
     }),
-    AuthProxyModule
+    AuthProxyModule,
+      EventProxyModule
   ],
   providers: [
     JwtStrategy,

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import {AuthProxyController} from "./auth-proxy.controller";
 import {ClientsModule, Transport} from "@nestjs/microservices";
+import {ClaimsProxyController} from "./claims-proxy.controller";
 
 @Module({
     imports: [
@@ -15,19 +15,19 @@ import {ClientsModule, Transport} from "@nestjs/microservices";
         }),
         ClientsModule.registerAsync([
             {
-                name: 'AUTH_SERVICE',
+                name: 'EVENT_SERVICE',
                 inject: [ConfigService],
                 useFactory: (configService: ConfigService) => ({
                     transport: Transport.TCP,
                     options: {
-                        host: configService.get('AUTH_SERVICE_HOST'),
-                        port: +configService.get('AUTH_SERVICE_PORT'), //
+                        host: configService.get('EVENT_SERVICE_HOST'),
+                        port: +configService.get('EVENT_SERVICE_PORT'),
                     },
                 }),
             },
         ]),
     ],
-    controllers: [AuthProxyController],
+    controllers: [ClaimsProxyController],
     exports: [ClientsModule],
 })
-export class AuthProxyModule {}
+export class EventProxyModule {}
