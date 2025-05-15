@@ -9,7 +9,6 @@ import {
     Inject, HttpCode, HttpStatus
 } from '@nestjs/common';
 
-import { AuthProxyService } from './auth-proxy.service';
 import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { IsPublic } from "../../../common/decorators/is-public.decorator";
@@ -21,7 +20,6 @@ import { ClientProxy } from "@nestjs/microservices";
 export class AuthProxyController {
     private readonly logger = new Logger(AuthProxyController.name);
     constructor(
-        private readonly authProxyService: AuthProxyService,
         @Inject('AUTH_SERVICE')
         private readonly authProxy: ClientProxy,
     ) {}
