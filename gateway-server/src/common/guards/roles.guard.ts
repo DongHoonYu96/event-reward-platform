@@ -1,9 +1,10 @@
-import {Injectable, CanActivate, ExecutionContext, UnauthorizedException} from '@nestjs/common';
+import {Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+    private readonly logger = new Logger(RolesGuard.name);
     constructor(private readonly reflector: Reflector) {}
 
     canActivate(context: ExecutionContext): boolean {
@@ -26,9 +27,7 @@ export class RolesGuard implements CanActivate {
         }
 
         if (!requiredRoles.includes(user.role)) {
-            console.log(`user.role: ${user.role}, requiredRoles: ${requiredRoles}`);
-
-            console.log(!requiredRoles.includes(user.role));
+            this.logger.warn(`User role ${user.role} does not match required roles: ${requiredRoles}`);
             throw new UnauthorizedException(
                 `이 작업을 수행할 권한이 없습니다. ${requiredRoles} 권한이 필요합니다.`,
             );

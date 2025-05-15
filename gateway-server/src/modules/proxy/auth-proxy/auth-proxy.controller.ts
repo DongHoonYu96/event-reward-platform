@@ -1,15 +1,12 @@
 import {
     Controller,
-    All,
     Body,
-    Headers,
-    Query,
     Req,
     UseGuards,
     Post,
     Get,
     Logger,
-    Inject
+    Inject, HttpCode, HttpStatus
 } from '@nestjs/common';
 
 import { AuthProxyService } from './auth-proxy.service';
@@ -36,6 +33,7 @@ export class AuthProxyController {
     }
 
     @IsPublic()
+    @HttpCode(HttpStatus.OK)
     @Post('users/login')
     async login(@Body() body) {
         return this.authProxy.send({ cmd: 'login' }, body);

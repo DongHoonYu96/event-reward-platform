@@ -6,6 +6,7 @@ import {JwtAuthGuard} from "./common/guards/jwt-auth.guard";
 import {PassportModule} from "@nestjs/passport";
 import {JwtStrategy} from "./modules/strategies/jwt.strategy";
 import {AuthProxyModule} from "./modules/proxy/auth-proxy/auth-proxy.module";
+import {RolesGuard} from "./common/guards/roles.guard";
 
 @Module({
   imports: [
@@ -31,6 +32,10 @@ import {AuthProxyModule} from "./modules/proxy/auth-proxy/auth-proxy.module";
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    }
   ],
 })
 export class AppModule implements NestModule {
