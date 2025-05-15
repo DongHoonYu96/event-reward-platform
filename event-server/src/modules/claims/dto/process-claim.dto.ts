@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsEnum, IsString, IsOptional } from 'class-validator';
+import {IsNotEmpty, IsEnum, IsString, IsOptional } from 'class-validator';
 import { ClaimStatus } from '../schemas/claim.schema';
 
 export class ProcessClaimDto {
