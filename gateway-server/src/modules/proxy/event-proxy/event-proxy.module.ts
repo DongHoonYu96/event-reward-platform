@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import {ClientsModule, Transport} from "@nestjs/microservices";
-import {ClaimsProxyController} from "./claims-proxy.controller";
+import { ClientsModule, Transport } from "@nestjs/microservices";
+import { ClaimsProxyController } from "./claims-proxy.controller";
+import { EventsProxyController } from "./events-proxy.controller";
 
 @Module({
     imports: [
@@ -27,7 +28,7 @@ import {ClaimsProxyController} from "./claims-proxy.controller";
             },
         ]),
     ],
-    controllers: [ClaimsProxyController],
+    controllers: [ClaimsProxyController, EventsProxyController],
     exports: [ClientsModule],
 })
 export class EventProxyModule {}

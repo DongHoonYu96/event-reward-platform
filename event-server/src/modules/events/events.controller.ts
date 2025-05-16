@@ -1,36 +1,36 @@
-// src/modules/events/events.controller.ts
-import { Controller, Get, Post, Body, Param, Delete, Put, Request, Query } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventStatus } from './schemas/event.schema';
 
-@Controller('events')
+@Controller()
 export class EventsController {
     constructor(private readonly eventsService: EventsService) {}
 
-    @Post()
-    create(@Body() createEventDto: CreateEventDto, @Request() req) {
-        return this.eventsService.create(createEventDto, req.user.userId); //
+    @MessagePattern({ cmd: 'create_event' })
+    create(@Payload() data: { createEventDto: CreateEventDto; userId: string }) {
+        return this.eventsService.create(data.createEventDto, data.userId);
     }
 
-    @Get()
-    findAll(@Query('status') status: EventStatus) {
-        return this.eventsService.findAll(status);
+    @MessagePattern({ cmd: 'find_all_events' })
+    findAll(@Payload() data: { status?: EventStatus }) {
+        return this.eventsService.findAll(data.status);
     }
 
-    @Get(':id')
-    findOne(@Param('id') id: string) {
+    @MessagePattern({ cmd: 'find_one_event' })
+    findOne(@Payload() id: string) {
         return this.eventsService.findOne(id);
     }
 
-    @Put(':id')
-    update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
-        return this.eventsService.update(id, updateEventDto);
+    @MessagePattern({ cmd: 'update_event' })
+    update(@Payload() data: { id: string; updateEventDto: UpdateEventDto }) {
+        return this.eventsService.update(data.id, data.updateEventDto);
     }
 
-    @Delete(':id')
-    remove(@Param('id') id: string) {
+    @MessagePattern({ cmd: 'remove_event' })
+    remove(@Payload() id: string) {
         return this.eventsService.remove(id);
     }
 }

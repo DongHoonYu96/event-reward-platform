@@ -15,7 +15,7 @@ import { IsPublic } from "../../../common/decorators/is-public.decorator";
 import { Roles, UserRole } from "../../../common/decorators/roles.decorator";
 import { ClientProxy } from "@nestjs/microservices";
 
-@Controller('AUTH_SERVICE')
+@Controller('AUTH-SERVICE')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AuthProxyController {
     private readonly logger = new Logger(AuthProxyController.name);
