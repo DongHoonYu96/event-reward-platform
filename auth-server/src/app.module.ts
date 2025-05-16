@@ -2,7 +2,7 @@ import {Module, NestModule} from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './modules/users/users.module';
-import mongoose from "mongoose";
+import mongoose, {set} from "mongoose";
 import {APP_GUARD} from "@nestjs/core";
 import {AppService} from "./app.service";
 import {RolesGuard} from "./common/guards/roles.guard";
@@ -16,9 +16,12 @@ import {JwtAuthGuard} from "./common/guards/jwt-auth.guard";
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URI'),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        mongoose.set('debug', true);
+        return {
+          uri: configService.get<string>('MONGO_URI'),
+        };
+      },
     }),
     UsersModule,
   ],

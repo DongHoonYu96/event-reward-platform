@@ -20,9 +20,12 @@ import {JwtStrategy} from "./modules/strategies/jwt.strategy";
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URI'),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        mongoose.set('debug', true);
+        return {
+          uri: configService.get<string>('MONGO_URI'),
+        };
+      },
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

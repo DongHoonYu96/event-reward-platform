@@ -1,35 +1,36 @@
 // src/modules/rewards/rewards.controller.ts
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RewardsService } from './rewards.service';
 import { CreateRewardDto } from './dto/create-reward.dto';
 import { UpdateRewardDto } from './dto/update-reward.dto';
 
-@Controller('rewards')
+@Controller()
 export class RewardsController {
     constructor(private readonly rewardsService: RewardsService) {}
 
-    @Post()
-    create(@Body() createRewardDto: CreateRewardDto) {
+    @MessagePattern({ cmd: 'create_reward' })
+    create(@Payload() createRewardDto: CreateRewardDto) {
         return this.rewardsService.create(createRewardDto);
     }
 
-    @Get('event/:eventId')
-    findByEvent(@Param('eventId') eventId: string) {
+    @MessagePattern({ cmd: 'find_rewards_by_event' })
+    findByEvent(@Payload() eventId: string) {
         return this.rewardsService.findByEvent(eventId);
     }
 
-    @Get(':id')
-    findOne(@Param('id') id: string) {
+    @MessagePattern({ cmd: 'find_one_reward' })
+    findOne(@Payload() id: string) {
         return this.rewardsService.findOne(id);
     }
 
-    @Put(':id')
-    update(@Param('id') id: string, @Body() updateRewardDto: UpdateRewardDto) {
-        return this.rewardsService.update(id, updateRewardDto);
+    @MessagePattern({ cmd: 'update_reward' })
+    update(@Payload() data: { id: string; updateRewardDto: UpdateRewardDto }) {
+        return this.rewardsService.update(data.id, data.updateRewardDto);
     }
 
-    @Delete(':id')
-    remove(@Param('id') id: string) {
+    @MessagePattern({ cmd: 'remove_reward' })
+    remove(@Payload() id: string) {
         return this.rewardsService.remove(id);
     }
 }

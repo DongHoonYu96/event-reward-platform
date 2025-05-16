@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from "@nestjs/microservices";
 import { ClaimsProxyController } from "./claims-proxy.controller";
 import { EventsProxyController } from "./events-proxy.controller";
+import {RewardsProxyController} from "./rewards-proxy.controller";
 
 @Module({
     imports: [
@@ -28,7 +29,7 @@ import { EventsProxyController } from "./events-proxy.controller";
             },
         ]),
     ],
-    controllers: [ClaimsProxyController, EventsProxyController],
+    controllers: [ClaimsProxyController, EventsProxyController, RewardsProxyController],
     exports: [ClientsModule],
 })
 export class EventProxyModule {}
