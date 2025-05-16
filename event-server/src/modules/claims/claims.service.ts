@@ -15,7 +15,7 @@ import { ProcessClaimDto } from './dto/process-claim.dto';
 import { EventsService } from '../events/events.service';
 import { RewardsService } from '../rewards/rewards.service';
 import {ClientProxy, RpcException} from "@nestjs/microservices";
-import {EventCondition, EventStatus} from "../events/schemas/event.schema";
+import {Event, EventCondition, EventStatus} from "../events/schemas/event.schema";
 import {firstValueFrom} from "rxjs";
 
 @Injectable()
@@ -58,7 +58,7 @@ export class ClaimsService {
         const existingClaim = await this.claimModel.findOne({
             userId,
             eventId: createClaimDto.eventId,
-            status: { $in: [ClaimStatus.REQUESTED, ClaimStatus.APPROVED, ClaimStatus.COMPLETED] },
+            status: { $in: [ClaimStatus.REQUESTED, ClaimStatus.APPROVED] },
         }).exec();
         if (existingClaim) {
             await this.recordFailedClaim(
@@ -77,7 +77,7 @@ export class ClaimsService {
         // 3. Auth 서비스에서 사용자 로그인 정보 가져오기
         const userInfo = await this.getUserInfoFromAuthServer(userId);
         for (const condition of event.conditions) {
-            const isConditionMet = await this.checkCondition(userInfo, condition);
+            const isConditionMet = await this.checkCondition(userId, condition, event);
             if (!isConditionMet) {
                 await this.recordFailedClaim(
                     createClaimDto.eventId,
@@ -101,7 +101,7 @@ export class ClaimsService {
         const newClaim = new this.claimModel({
             userId,
             eventId: createClaimDto.eventId,
-            status: ClaimStatus.REQUESTED,
+            status: ClaimStatus.APPROVED,
             rewards: rewardIds,
         });
 
@@ -224,11 +224,11 @@ export class ClaimsService {
         }
     }
 
-    private async checkCondition(userId: string, condition: EventCondition): Promise<boolean> {
+    private async checkCondition(userId: string, condition: EventCondition, event: Event): Promise<boolean> {
         // 조건 유형에 따른 검증 로직
         switch (condition.type) {
             case 'CONTINUOUS_LOGIN':
-                return this.checkContinuousLogin(userId, condition);
+                return this.checkContinuousLogin(userId, condition, event);
             case 'FRIEND_INVITE':
                 return this.checkFriendInvites(userId, condition);
             case 'CUSTOM':
@@ -239,12 +239,27 @@ export class ClaimsService {
     }
 
     // 이 메서드들은 실제 구현에서는 사용자 활동을 추적하는 데이터베이스를 조회해야 함
-    private async checkContinuousLogin(userInfo: any, condition: EventCondition): Promise<boolean> {
+    private async checkContinuousLogin(userId: string, condition: EventCondition, event : Event): Promise<boolean> {
         // 이벤트의 요구 연속 로그인 일수와 사용자의 연속 로그인 일수 비교
         const requiredDays = condition.value || 0;
-        const userConsecutiveDays = userInfo.continuousLoginDays || 0;
 
-        return userConsecutiveDays >= requiredDays;
+        this.logger.log('event.startDate: ' + event.startDate);
+        this.logger.log('event.endDate: ' + event.endDate);
+        this.logger.log('userId: ' + userId);
+        const userConsecutiveDays = await this.authClient.send(
+            {cmd: 'get_user_login_cnt'},
+            {
+                userId: userId,
+                startDate: event.startDate,
+                endDate: event.endDate
+            }
+        ).toPromise(
+        ) || 0;
+
+        this.logger.log(`User ${userId} has logged in for ${userConsecutiveDays.loginCnt} consecutive days.`);
+        this.logger.log(`Required consecutive days: ${requiredDays}`);
+
+        return userConsecutiveDays.loginCnt >= requiredDays;
     }
 
     private async checkFriendInvites(userId: string, condition: EventCondition): Promise<boolean> {

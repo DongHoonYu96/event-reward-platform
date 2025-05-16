@@ -53,6 +53,14 @@ export class AuthProxyController {
         );
     }
 
+    @Get('users/loginCnt')
+    async getLoginCntBetweenEventDate(@Req() req) {
+        this.logger.log(`Get loginCnt for user: ${req.user.userId}`);
+        return this.authProxy.send(
+            { cmd: 'get_user_login_cnt' },req.user.userId
+        );
+    }
+
     @Roles(UserRole.ADMIN)
     @Get('users/admin-only')
     adminOnly(@Req() req) {

@@ -5,7 +5,6 @@ export enum ClaimStatus {
     REQUESTED = 'REQUESTED',
     APPROVED = 'APPROVED',
     REJECTED = 'REJECTED',
-    COMPLETED = 'COMPLETED',
 }
 
 @Schema({ timestamps: true })

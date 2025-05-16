@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -85,6 +85,35 @@ export class UsersService {
         }
         return user;
     }
+
+    async countAttendancesInPeriod(userId: string, startDate: Date, endDate: Date): Promise<number> {
+        // 시간 정보 제거
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        // 기간 내 출석 횟수 계산
+        const result =  await this.userModel.aggregate([
+            // 해당 사용자 찾기
+            { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+
+            // 배열 필드를 개별 문서로 분해
+            { $unwind: '$attendanceDates' },
+
+            // 날짜 범위 필터링
+            { $match: {
+                    attendanceDates: {
+                        $gte: this.formatDate(startDate),
+                        $lte: this.formatDate(endDate)
+                    }
+                }},
+
+            // 개수 세기
+            { $count: 'total' }
+        ]);
+
+
+        return result.length > 0 ? result[0].total : 0;
+    }
+
 
     private formatDate(date: Date): string {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

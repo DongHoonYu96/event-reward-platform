@@ -2,7 +2,7 @@ import { Controller, Logger } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { MessagePattern } from '@nestjs/microservices';
+import {MessagePattern, Payload} from '@nestjs/microservices';
 
 @Controller('users')
 export class UsersController {
@@ -38,6 +38,27 @@ export class UsersController {
             role: user.role,
         }
     }
+
+    @MessagePattern({ cmd: 'get_user_login_cnt' })
+    async getLoginCntBetweenEventDate(@Payload() data: { userId: string; startDate: Date; endDate: Date }) {
+        this.logger.log(`Get User LoginCnt for user: ${data.userId}`);
+        this.logger.log(`StartDate: ${data.startDate}`);
+
+        // 문자열인 경우 Date 객체로 변환
+        const startDate = typeof data.startDate === 'string' ? new Date(data.startDate) : data.startDate;
+        const endDate = typeof data.endDate === 'string' ? new Date(data.endDate) : data.endDate;
+
+        const loginCnt = await this.usersService.countAttendancesInPeriod(
+            data.userId,
+            startDate,
+            endDate
+        );
+
+        return {
+            loginCnt: loginCnt,
+        };
+    }
+
 
     @MessagePattern({ cmd: 'admin_only' })
     async adminOnly(data: { userId: string, role: string }) {

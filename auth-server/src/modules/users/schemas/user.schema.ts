@@ -22,7 +22,7 @@ export class User extends Document {
     @Prop({ type: String, enum: Object.values(UserRole), default: UserRole.USER })
     role: UserRole;
 
-    // 출석 기록 - 날짜 문자열 배열 ('YYYY-MM-DD' 형식)
+    // 출석 기록 - 날짜 문자열 배열 ('YYYY-MM-DD' 형식) for unique date
     @Prop({ type: [String], default: [] })
     attendanceDates: string[];
 
