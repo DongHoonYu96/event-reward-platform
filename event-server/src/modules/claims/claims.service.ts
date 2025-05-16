@@ -1,4 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Inject,
+    Logger,
+    HttpStatus
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Claim, ClaimStatus } from './schemas/claim.schema';
@@ -6,23 +14,44 @@ import { CreateClaimDto } from './dto/create-claim.dto';
 import { ProcessClaimDto } from './dto/process-claim.dto';
 import { EventsService } from '../events/events.service';
 import { RewardsService } from '../rewards/rewards.service';
+import {ClientProxy, RpcException} from "@nestjs/microservices";
+import {EventCondition, EventStatus} from "../events/schemas/event.schema";
+import {firstValueFrom} from "rxjs";
 
 @Injectable()
 export class ClaimsService {
+    private readonly logger = new Logger(ClaimsService.name);
     constructor(
         @InjectModel(Claim.name) private readonly claimModel: Model<Claim>,
         private readonly eventsService: EventsService,
         private readonly rewardsService: RewardsService,
+        @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy
     ) {}
 
     async create(createClaimDto: CreateClaimDto, userId: string): Promise<Claim> {
         // 이벤트 존재 여부 확인
         const event = await this.eventsService.findOne(createClaimDto.eventId);
+        if (!event) {
+            this.logger.warn(`이벤트를 찾을 수 없습니다: ${createClaimDto.eventId}`);
+            throw new RpcException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: '이벤트를 찾을 수 없습니다',
+                error: 'Bad Request',
+            })
+        }
 
-        // 이벤트 조건 충족 여부 검증
-        const conditionsMet = await this.eventsService.verifyEventConditions(userId, createClaimDto.eventId);
-        if (!conditionsMet) {
-            throw new BadRequestException('이벤트 조건을 충족하지 않았습니다');
+        if (event.status !== EventStatus.ACTIVE) {
+            await this.recordFailedClaim(
+                createClaimDto.eventId,
+                userId,
+                '이벤트가 활성 상태가 아닙니다'
+            );
+            this.logger.warn(`이벤트가 활성 상태가 아닙니다: ${event.status}`);
+            throw new RpcException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: '이벤트가 활성 상태가 아닙니다',
+                error: 'Bad Request',
+            })
         }
 
         // 중복 청구 확인
@@ -31,9 +60,37 @@ export class ClaimsService {
             eventId: createClaimDto.eventId,
             status: { $in: [ClaimStatus.REQUESTED, ClaimStatus.APPROVED, ClaimStatus.COMPLETED] },
         }).exec();
-
         if (existingClaim) {
-            throw new BadRequestException('이미 이 이벤트에 대한 보상을 청구했습니다');
+            await this.recordFailedClaim(
+                createClaimDto.eventId,
+                userId,
+                '이미 이 이벤트에 대한 보상을 청구했습니다'
+            );
+            this.logger.warn(`이미 이 이벤트에 대한 보상을 청구했습니다: ${createClaimDto.eventId}`);
+            throw new RpcException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: '이미 이 이벤트에 대한 보상을 청구했습니다',
+                error: 'Bad Request',
+            })
+        }
+
+        // 3. Auth 서비스에서 사용자 로그인 정보 가져오기
+        const userInfo = await this.getUserInfoFromAuthServer(userId);
+        for (const condition of event.conditions) {
+            const isConditionMet = await this.checkCondition(userInfo, condition);
+            if (!isConditionMet) {
+                await this.recordFailedClaim(
+                    createClaimDto.eventId,
+                    userId,
+                    `조건을 충족하지 못했습니다: ${condition.description}`
+                );
+                this.logger.warn(`조건을 충족하지 못했습니다: ${condition.description}`);
+                throw new RpcException({
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: `조건을 충족하지 못했습니다: ${condition.description}`,
+                    error: 'Bad Request',
+                })
+            }
         }
 
         // 보상 목록 조회
@@ -131,4 +188,73 @@ export class ClaimsService {
 
         return claim.save();
     }
+
+    private async recordFailedClaim(
+        eventId: string,
+        userId: string,
+        reason: string
+    ): Promise<Claim> {
+        const claim = new this.claimModel({
+            eventId,
+            userId,
+            status: ClaimStatus.REJECTED,
+            rejectionReason: reason,
+            processedAt: new Date()
+        });
+
+        return claim.save();
+    }
+
+    private async getUserInfoFromAuthServer(userId: string): Promise<any> {
+        try {
+            // Auth 서비스에 TCP 요청을 보내 사용자 로그인 정보 가져오기
+            return await firstValueFrom(
+                this.authClient.send(
+                    { cmd: 'get_user_info' },
+                    userId
+                )
+            );
+        } catch (error) {
+            this.logger.error(`사용자 정보를 가져오는 중 오류 발생: ${error.message}\n auth-server 긴급 점검 필요!!`);
+            throw new RpcException({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: '사용자 정보를 가져오는 중 오류 발생',
+                error: 'Internal Server Error',
+            })
+        }
+    }
+
+    private async checkCondition(userId: string, condition: EventCondition): Promise<boolean> {
+        // 조건 유형에 따른 검증 로직
+        switch (condition.type) {
+            case 'CONTINUOUS_LOGIN':
+                return this.checkContinuousLogin(userId, condition);
+            case 'FRIEND_INVITE':
+                return this.checkFriendInvites(userId, condition);
+            case 'CUSTOM':
+                return this.checkCustomCondition(userId, condition);
+            default:
+                return false;
+        }
+    }
+
+    // 이 메서드들은 실제 구현에서는 사용자 활동을 추적하는 데이터베이스를 조회해야 함
+    private async checkContinuousLogin(userInfo: any, condition: EventCondition): Promise<boolean> {
+        // 이벤트의 요구 연속 로그인 일수와 사용자의 연속 로그인 일수 비교
+        const requiredDays = condition.value || 0;
+        const userConsecutiveDays = userInfo.continuousLoginDays || 0;
+
+        return userConsecutiveDays >= requiredDays;
+    }
+
+    private async checkFriendInvites(userId: string, condition: EventCondition): Promise<boolean> {
+        // 실제 구현: 사용자가 초대한 친구 수 확인
+        return true; // 예시로 항상 참 반환
+    }
+
+    private async checkCustomCondition(userId: string, condition: any): Promise<boolean> {
+        // 실제 구현: 커스텀 조건 확인 로직
+        return true; // 예시로 항상 참 반환
+    }
+
 }

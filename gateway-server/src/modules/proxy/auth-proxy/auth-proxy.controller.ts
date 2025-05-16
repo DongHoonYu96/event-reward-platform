@@ -45,11 +45,11 @@ export class AuthProxyController {
         return this.authProxy.send({ cmd: 'register' }, body);
     }
 
-    @Get('users/profile')
+    @Get('users/info')
     async getProfile(@Req() req) {
         this.logger.log(`Get profile for user: ${req.user.userId}`);
         return this.authProxy.send(
-            { cmd: 'get_profile' },req.user.userId
+            { cmd: 'get_user_info' },req.user.userId
         );
     }
 

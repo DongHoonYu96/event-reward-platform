@@ -98,7 +98,7 @@ export class EventsService {
     private async checkCondition(userId: string, condition: any): Promise<boolean> {
         // 조건 유형에 따른 검증 로직
         switch (condition.type) {
-            case 'LOGIN_STREAK':
+            case 'CONTINUOUS_LOGIN':
                 return this.checkLoginStreak(userId, condition.value);
             case 'FRIEND_INVITE':
                 return this.checkFriendInvites(userId, condition.value);

@@ -11,6 +11,7 @@ import {JwtAuthGuard} from "./common/guards/jwt-auth.guard";
 import mongoose from "mongoose";
 import {PassportModule} from "@nestjs/passport";
 import {JwtStrategy} from "./modules/strategies/jwt.strategy";
+import {ClientsModule, Transport} from "@nestjs/microservices";
 
 @Module({
   imports: [

@@ -1,4 +1,3 @@
-// src/modules/events/schemas/event.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
@@ -10,7 +9,7 @@ export enum EventStatus {
 }
 
 export enum ConditionType {
-    LOGIN_STREAK = 'LOGIN_STREAK',
+    CONTINUOUS_LOGIN = 'CONTINUOUS_LOGIN',
     FRIEND_INVITE = 'FRIEND_INVITE',
     CUSTOM = 'CUSTOM',
 }
