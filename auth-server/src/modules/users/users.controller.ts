@@ -27,10 +27,16 @@ export class UsersController {
         return this.usersService.login(loginUserDto);
     }
 
-    @MessagePattern({ cmd: 'get_profile' })
-    async getProfile(userId: string) {
-        this.logger.log(`Get profile for user: ${userId}`);
-        return this.usersService.findOne(userId);
+    @MessagePattern({ cmd: 'get_user_info' })
+    async getUserInfo(userId: string) {
+        this.logger.log(`Get UserInfo for user: ${userId}`);
+        const user = await this.usersService.findOne(userId);
+        return {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+        }
     }
 
     @MessagePattern({ cmd: 'admin_only' })
