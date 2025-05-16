@@ -10,6 +10,7 @@ export class ClaimsProxyController {
     ) {}
 
     @Post()
+    @Roles(UserRole.ADMIN, UserRole.USER)
     create(@Body() createClaimDto: any, @Request() req) {
         return this.eventProxy.send(
             { cmd: 'create_claim' },
@@ -39,6 +40,7 @@ export class ClaimsProxyController {
     }
 
     @Get(':id')
+    @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.AUDITOR)
     findOne(@Param('id') id: string, @Request() req) {
         return this.eventProxy.send(
             { cmd: 'find_one_claim' },
@@ -47,7 +49,7 @@ export class ClaimsProxyController {
     }
 
     @Put(':id/make-decision')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.OPERATOR)
     makeDecisionOnClaim(
         @Param('id') id: string,
         @Body() processClaimDto: any,

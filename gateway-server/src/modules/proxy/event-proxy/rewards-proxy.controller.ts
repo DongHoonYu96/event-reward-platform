@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import {Roles, UserRole} from "../../../common/decorators/roles.decorator";
+import {IsPublic} from "../../../common/decorators/is-public.decorator";
 
 @Controller('EVENT-SERVICE/rewards')
 export class RewardsProxyController {
@@ -9,6 +11,7 @@ export class RewardsProxyController {
     ) {}
 
     @Post()
+    @Roles(UserRole.ADMIN, UserRole.OPERATOR)
     create(@Body() createRewardDto: any) {
         return this.eventProxy.send(
             { cmd: 'create_reward' },
@@ -17,6 +20,7 @@ export class RewardsProxyController {
     }
 
     @Get('event/:eventId')
+    @IsPublic()
     findByEvent(@Param('eventId') eventId: string) {
         return this.eventProxy.send(
             { cmd: 'find_rewards_by_event' },
@@ -25,6 +29,7 @@ export class RewardsProxyController {
     }
 
     @Get(':id')
+    @IsPublic()
     findOne(@Param('id') id: string) {
         return this.eventProxy.send(
             { cmd: 'find_one_reward' },
@@ -33,6 +38,7 @@ export class RewardsProxyController {
     }
 
     @Put(':id')
+    @Roles(UserRole.ADMIN, UserRole.OPERATOR)
     update(@Param('id') id: string, @Body() updateRewardDto: any) {
         return this.eventProxy.send(
             { cmd: 'update_reward' },
@@ -41,6 +47,7 @@ export class RewardsProxyController {
     }
 
     @Delete(':id')
+    @Roles(UserRole.ADMIN, UserRole.OPERATOR)
     remove(@Param('id') id: string) {
         return this.eventProxy.send(
             { cmd: 'remove_reward' },
