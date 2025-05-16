@@ -25,9 +25,15 @@ export class EventsService {
         return createdEvent.save();
     }
 
-    async findAll(status?: EventStatus): Promise<Event[]> {
-        const query = status ? { status } : {};
-        return this.eventModel.find(query).exec();
+    // async findAll(status?: EventStatus): Promise<Event[]> {
+    //     const query = status ? { status } : {};
+    //     return this.eventModel.find(query).exec();
+    // }
+
+    async findAll(status?: EventStatus): Promise<any[]> {
+        const matchStage = status ? { status } : {};
+
+        return this.findAllWithRewards(matchStage);
     }
 
     async findOne(id: string): Promise<Event> {
@@ -117,5 +123,20 @@ export class EventsService {
     private async checkCustomCondition(userId: string, condition: any): Promise<boolean> {
         // 실제 구현: 커스텀 조건 확인 로직
         return true; // 예시로 항상 참 반환
+    }
+
+    private findAllWithRewards(matchStage: { status: EventStatus } | {}) {
+        return this.eventModel.aggregate([
+            {$match: matchStage},
+            {
+                $lookup: {
+                    from: 'rewards',
+                    localField: '_id',
+                    foreignField: 'eventId',
+                    as: 'rewards'
+                }
+            },
+            {$sort: {createdAt: -1}}
+        ]).exec();
     }
 }
