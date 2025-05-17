@@ -17,14 +17,15 @@ services:
     build:
       context: ./gateway-server
       dockerfile: Dockerfile
+      target: development
     command: npm run start:dev
     container_name: gateway-server
     restart: no
     ports:
       - "3004:3004"
     volumes:
-      - .:/var/app
-#      - ./gateway-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
+#      - .:/var/app
+      - ./gateway-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
 #      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
     env_file:
       - /gateway-server/.env
@@ -37,14 +38,15 @@ services:
     build:
       context: ./auth-server
       dockerfile: Dockerfile
+      target: development
     command: npm run start:dev
     container_name: auth-server
     restart: no
     ports:
       - "3001:3001"
     volumes:
-      - .:/var/app
-#      - ./auth-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
+#      - .:/var/app
+      - ./auth-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
 #      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
     env_file:
       - /auth-server/.env
@@ -57,13 +59,14 @@ services:
     build:
       context: ./event-server
       dockerfile: Dockerfile
+      target: development
     command: npm run start:dev
     container_name: event-server
     restart: no
     ports:
       - "3002:3002"
     volumes:
-      - .:/var/app
+      - ./event-server:/var/app
     env_file:
       - /event-server/.env
     depends_on:
