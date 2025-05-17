@@ -1,0 +1,79 @@
+services:
+  e2e:
+    build:
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./specs:/var/app/specs
+    depends_on:
+      - mongodb
+      - gateway-server
+      - auth-server
+      - event-server
+    networks:
+      - event-network
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-e2e
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1234
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - event-network
+
+  gateway-server:
+    build:
+      context: ../gateway-server
+      dockerfile: Dockerfile
+    container_name: gateway-server-e2e
+    restart: no
+    ports:
+      - "3004:3004"
+    env_file:
+      - ../gateway-server/.env
+    depends_on:
+      - mongodb
+    networks:
+      - event-network
+
+  auth-server:
+    build:
+      context: ../auth-server
+      dockerfile: Dockerfile
+    container_name: auth-server-e2e
+    restart: no
+    ports:
+      - "3001:3001"
+    env_file:
+      - ../auth-server/.env
+    depends_on:
+      - mongodb
+    networks:
+      - event-network
+
+  event-server:
+    build:
+      context: ../event-server
+      dockerfile: Dockerfile
+    container_name: event-server-e2e
+    restart: no
+    ports:
+      - "3002:3002"
+    env_file:
+      - ../event-server/.env
+    depends_on:
+      - mongodb
+    networks:
+      - event-network
+
+networks:
+  event-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
