@@ -18,7 +18,7 @@ async function bootstrap() {
     transport: Transport.TCP,
     options: {
       host: configService.get('MS_HOST'),
-      port: +configService.get('MS_PORT'),
+      port: +configService.get('MS_PORT'), //
     },
   };
   const port = configService.get('port');

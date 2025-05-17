@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
     container_name: mongodb
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1234
     ports:
-      - "${MONGO_PORT}:27017"
+      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -19,16 +17,17 @@ services:
     build:
       context: ./gateway-server
       dockerfile: Dockerfile
+    command: npm run start:dev
     container_name: gateway-server
     restart: no
     ports:
-      - "${GATEWAY_PORT}:3000"
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
-      - JWT_SECRET=${JWT_SECRET}
-      - AUTH_SERVICE_URL=http://auth-server:3001
-      - EVENT_SERVICE_URL=http://event-server:3002
+      - "3004:3004"
+    volumes:
+      - .:/var/app
+#      - ./gateway-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
+#      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
+    env_file:
+      - /gateway-server/.env
     depends_on:
       - mongodb
     networks:
@@ -38,14 +37,17 @@ services:
     build:
       context: ./auth-server
       dockerfile: Dockerfile
+    command: npm run start:dev
     container_name: auth-server
     restart: no
     ports:
-      - "${AUTH_PORT}:3001"
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
-      - JWT_SECRET=${JWT_SECRET}
+      - "3001:3001"
+    volumes:
+      - .:/var/app
+#      - ./auth-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
+#      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
+    env_file:
+      - /auth-server/.env
     depends_on:
       - mongodb
     networks:
@@ -55,14 +57,15 @@ services:
     build:
       context: ./event-server
       dockerfile: Dockerfile
+    command: npm run start:dev
     container_name: event-server
     restart: no
     ports:
-      - "${EVENT_PORT}:3002"
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
-      - JWT_SECRET=${JWT_SECRET}
+      - "3002:3002"
+    volumes:
+      - .:/var/app
+    env_file:
+      - /event-server/.env
     depends_on:
       - mongodb
     networks:

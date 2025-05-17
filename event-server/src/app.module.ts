@@ -14,7 +14,7 @@ import {JwtStrategy} from "./modules/strategies/jwt.strategy";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
+    ConfigModule.forRoot({ //
       isGlobal: true,
     }),
     MongooseModule.forRootAsync({
