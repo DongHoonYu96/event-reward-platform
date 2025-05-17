@@ -15,15 +15,28 @@ import {RewardsProxyController} from "./rewards-proxy.controller";
                 maxRedirects: configService.get('HTTP_MAX_REDIRECTS', 5),
             }),
         }),
+        // ClientsModule.registerAsync([
+        //     {
+        //         name: 'EVENT_SERVICE',
+        //         inject: [ConfigService],
+        //         useFactory: (configService: ConfigService) => ({
+        //             transport: Transport.TCP,
+        //             options: {
+        //                 host: configService.get('EVENT_SERVICE_HOST'),
+        //                 port: +configService.get('EVENT_SERVICE_PORT'),
+        //             },
+        //         }),
+        //     },
+        // ]),
         ClientsModule.registerAsync([
             {
                 name: 'EVENT_SERVICE',
                 inject: [ConfigService],
                 useFactory: (configService: ConfigService) => ({
-                    transport: Transport.TCP,
+                    transport: Transport.RMQ,
                     options: {
-                        host: configService.get('EVENT_SERVICE_HOST'),
-                        port: +configService.get('EVENT_SERVICE_PORT'),
+                        urls: configService.getOrThrow('RABBITMQ_URI'),
+                        queue: 'event',
                     },
                 }),
             },

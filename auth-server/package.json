@@ -27,6 +27,8 @@
     "@nestjs/microservices": "^10.4.17",
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/passport": "^11.0.5",
+    "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.8",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",

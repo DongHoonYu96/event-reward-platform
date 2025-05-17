@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import {MicroserviceOptions, TcpOptions, Transport} from "@nestjs/microservices";
+import {MicroserviceOptions, RmqOptions, TcpOptions, Transport} from "@nestjs/microservices";
 import {Logger, ValidationPipe} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
 
@@ -14,13 +14,22 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  const options : TcpOptions = {
-    transport: Transport.TCP,
+  // const options : TcpOptions = {
+  //   transport: Transport.TCP,
+  //   options: {
+  //     host: configService.get('MS_HOST'),
+  //     port: +configService.get('MS_PORT'),
+  //   },
+  // };
+
+  const options : RmqOptions = {
+    transport: Transport.RMQ,
     options: {
-      host: configService.get('MS_HOST'),
-      port: +configService.get('MS_PORT'),
+      urls: configService.getOrThrow('RABBITMQ_URI'),
+      queue: 'auth',
     },
   };
+
   const port = configService.get('port');
 
   app.connectMicroservice<MicroserviceOptions>(options);

@@ -2,7 +2,7 @@ import { Controller, Logger } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import {MessagePattern, Payload} from '@nestjs/microservices';
+import {MessagePattern, Payload, RpcException} from '@nestjs/microservices';
 
 @Controller('users')
 export class UsersController {

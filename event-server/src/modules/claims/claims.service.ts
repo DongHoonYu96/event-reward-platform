@@ -32,7 +32,7 @@ export class ClaimsService {
 
         const event = await this.ValidateIsEventExist(createClaimDto);
         await this.validateIsActiveEvent(event, createClaimDto, userId);
-        
+
         await this.validateIsDuplicateClaim(userId, createClaimDto);
 
         await this.validateIsConditionMet(event, userId, createClaimDto);
@@ -48,7 +48,7 @@ export class ClaimsService {
             status: ClaimStatus.APPROVED,
             rewards: rewardIds,
         });
-
+        // todo : 보상 지급 처리 로직 추가
         return newClaim.save();
     }
 

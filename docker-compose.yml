@@ -13,6 +13,18 @@ services:
     networks:
       - event-network
 
+  rabbitmq:
+    image: rabbitmq:3-management  # 관리 GUI가 포함된 이미지
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # AMQP 프로토콜 포트
+      - "15672:15672"  # 관리 UI 포트
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - event-network
+
   gateway-server:
     build:
       context: ./gateway-server
@@ -80,3 +92,4 @@ networks:
 
 volumes:
   mongodb_data:
+
