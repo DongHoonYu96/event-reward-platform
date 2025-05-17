@@ -10,8 +10,15 @@ export class ClaimsController {
     constructor(private readonly claimsService: ClaimsService) {}
 
     @MessagePattern({ cmd: 'create_claim' })
-    create(@Payload() data: { createClaimDto: CreateClaimDto; userId: string }) {
-        return this.claimsService.create(data.createClaimDto, data.userId);
+   async create(@Payload() data: { createClaimDto: CreateClaimDto; userId: string }) {
+        const claim = await this.claimsService.create(data.createClaimDto, data.userId);
+        return {
+            id: claim._id,
+            userId: claim.userId,
+            eventId: claim.eventId,
+            status: claim.status,
+            rewards: claim.rewards,
+        }
     }
 
     @MessagePattern({ cmd: 'find_all_claims' })

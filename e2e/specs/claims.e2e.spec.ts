@@ -122,7 +122,7 @@ describe('Claims', () => {
         });
 
         const data = await response.json();
-        // console.log('Create Claim Response:', data);
+        console.log('Create Claim Response:', data);
         expect(data).toBeDefined();
         expect(data.status).toBe('APPROVED');
         expect(data.eventId).toBe(eventId);
