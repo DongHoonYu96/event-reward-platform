@@ -29,69 +29,13 @@ export class ClaimsService {
     ) {}
 
     async create(createClaimDto: CreateClaimDto, userId: string): Promise<Claim> {
-        // 이벤트 존재 여부 확인
-        const event = await this.eventsService.findOne(createClaimDto.eventId);
-        if (!event) {
-            this.logger.warn(`이벤트를 찾을 수 없습니다: ${createClaimDto.eventId}`);
-            throw new RpcException({
-                statusCode: HttpStatus.BAD_REQUEST,
-                message: '이벤트를 찾을 수 없습니다',
-                error: 'Bad Request',
-            })
-        }
 
-        if (event.status !== EventStatus.ACTIVE) {
-            await this.recordFailedClaim(
-                createClaimDto.eventId,
-                userId,
-                '이벤트가 활성 상태가 아닙니다'
-            );
-            this.logger.warn(`이벤트가 활성 상태가 아닙니다: ${event.status}`);
-            throw new RpcException({
-                statusCode: HttpStatus.BAD_REQUEST,
-                message: '이벤트가 활성 상태가 아닙니다',
-                error: 'Bad Request',
-            })
-        }
+        const event = await this.ValidateIsEventExist(createClaimDto);
+        await this.validateIsActiveEvent(event, createClaimDto, userId);
+        
+        await this.validateIsDuplicateClaim(userId, createClaimDto);
 
-        // 중복 청구 확인
-        const existingClaim = await this.claimModel.findOne({
-            userId,
-            eventId: createClaimDto.eventId,
-            status: { $in: [ClaimStatus.REQUESTED, ClaimStatus.APPROVED] },
-        }).exec();
-        if (existingClaim) {
-            await this.recordFailedClaim(
-                createClaimDto.eventId,
-                userId,
-                '이미 이 이벤트에 대한 보상을 청구했습니다'
-            );
-            this.logger.warn(`이미 이 이벤트에 대한 보상을 청구했습니다: ${createClaimDto.eventId}`);
-            throw new RpcException({
-                statusCode: HttpStatus.BAD_REQUEST,
-                message: '이미 이 이벤트에 대한 보상을 청구했습니다',
-                error: 'Bad Request',
-            })
-        }
-
-        // 3. Auth 서비스에서 사용자 로그인 정보 가져오기
-        const userInfo = await this.getUserInfoFromAuthServer(userId);
-        for (const condition of event.conditions) {
-            const isConditionMet = await this.checkCondition(userId, condition, event);
-            if (!isConditionMet) {
-                await this.recordFailedClaim(
-                    createClaimDto.eventId,
-                    userId,
-                    `조건을 충족하지 못했습니다: ${condition.description}`
-                );
-                this.logger.warn(`조건을 충족하지 못했습니다: ${condition.description}`);
-                throw new RpcException({
-                    statusCode: HttpStatus.BAD_REQUEST,
-                    message: `조건을 충족하지 못했습니다: ${condition.description}`,
-                    error: 'Bad Request',
-                })
-            }
-        }
+        await this.validateIsConditionMet(event, userId, createClaimDto);
 
         // 보상 목록 조회
         const rewards = await this.rewardsService.findByEvent(createClaimDto.eventId);
@@ -188,6 +132,77 @@ export class ClaimsService {
 
         return claim.save();
     }
+
+    private async validateIsConditionMet(event: Event, userId: string, createClaimDto: CreateClaimDto) {
+        for (const condition of event.conditions) {
+            const isConditionMet = await this.checkCondition(userId, condition, event);
+            if (!isConditionMet) {
+                await this.recordFailedClaim(
+                    createClaimDto.eventId,
+                    userId,
+                    `조건을 충족하지 못했습니다: ${condition.description}`
+                );
+                this.logger.warn(`조건을 충족하지 못했습니다: ${condition.description}`);
+                throw new RpcException({
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: `조건을 충족하지 못했습니다: ${condition.description}`,
+                    error: 'Bad Request',
+                })
+            }
+        }
+    }
+
+    private async validateIsDuplicateClaim(userId: string, createClaimDto: CreateClaimDto) {
+        const existingClaim = await this.claimModel.findOne({
+            userId,
+            eventId: createClaimDto.eventId,
+            status: {$in: [ClaimStatus.REQUESTED, ClaimStatus.APPROVED]},
+        }).exec();
+        if (existingClaim) {
+            await this.recordFailedClaim(
+                createClaimDto.eventId,
+                userId,
+                '이미 이 이벤트에 대한 보상을 청구했습니다'
+            );
+            this.logger.warn(`이미 이 이벤트에 대한 보상을 청구했습니다: ${createClaimDto.eventId}`);
+            throw new RpcException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: '이미 이 이벤트에 대한 보상을 청구했습니다',
+                error: 'Bad Request',
+            })
+        }
+    }
+
+    private async validateIsActiveEvent(event: Event, createClaimDto: CreateClaimDto, userId: string) {
+        if (event.status !== EventStatus.ACTIVE) {
+            await this.recordFailedClaim(
+                createClaimDto.eventId,
+                userId,
+                '이벤트가 활성 상태가 아닙니다'
+            );
+            this.logger.warn(`이벤트가 활성 상태가 아닙니다: ${event.status}`);
+            throw new RpcException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: '이벤트가 활성 상태가 아닙니다',
+                error: 'Bad Request',
+            })
+        }
+    }
+
+    private async ValidateIsEventExist(createClaimDto: CreateClaimDto) {
+        const event = await this.eventsService.findOne(createClaimDto.eventId);
+        if (!event) {
+            this.logger.warn(`이벤트를 찾을 수 없습니다: ${createClaimDto.eventId}`);
+            throw new RpcException({
+                statusCode: HttpStatus.BAD_REQUEST,
+                message: '이벤트를 찾을 수 없습니다',
+                error: 'Bad Request',
+            })
+        }
+        return event;
+    }
+
+
 
     private async recordFailedClaim(
         eventId: string,

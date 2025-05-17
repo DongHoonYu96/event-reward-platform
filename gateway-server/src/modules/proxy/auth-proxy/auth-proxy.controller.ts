@@ -70,19 +70,4 @@ export class AuthProxyController {
             { userId: req.user.userId, role: req.user.role }
         );
     }
-
-    private prepareHeaders(headers: any) {
-        // 클라이언트 IP 등을 제거
-        const { host, ...rest } = headers;
-        return rest;
-    }
-
-    private addUserToHeaders(req: any, headers: any) {
-        const preparedHeaders = this.prepareHeaders(headers);
-        if (req.user) {
-            preparedHeaders['X-User-Id'] = req.user.userId;
-            preparedHeaders['X-User-Role'] = req.user.role;
-        }
-        return preparedHeaders;
-    }
 }
