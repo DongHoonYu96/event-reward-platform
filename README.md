@@ -36,7 +36,7 @@ flowchart TB
         EVENT_DB[(이벤트/보상 DB)]
     end
 
-    Client --> GW
+    Client -- "HTTP" --> GW
     GW --> GAUTH
     GAUTH --> GROUTE
 
@@ -52,8 +52,10 @@ flowchart TB
     EVENT --> REQ
 
     %% 통신 방식
-    GROUTE -- "HTTP 또는 TCP 또는 메시지 큐" --> AUTH
-    GROUTE -- "HTTP 또는 TCP 또는 메시지 큐" --> EVENT
+    GROUTE -- "TCP 또는 메시지 큐" --> AUTH
+    GROUTE -- "TCP 또는 메시지 큐" --> EVENT
+
+    
 ```
 
 ## 실행 방법
@@ -68,7 +70,7 @@ flowchart TB
 1. 저장소 클론
 
 ```bash
-git clone https://github.com/your-username/event-reward-platform.git
+git clone https://github.com/DongHoonYu96/event-reward-platform.git
 cd event-reward-platform
 ```
 
@@ -80,9 +82,9 @@ docker-compose up -d
 
 3. 서비스 접근
 
-- Gateway API: http://localhost:3004
-- Auth API: http://localhost:3001
-- Event API: http://localhost:3002
+- Gateway Server: http://localhost:3004
+- Auth Server: http://localhost:3001 (swagger용 포트)
+- Event Server: http://localhost:3002 (swagger용 포트)
 
 ### 인증
 
@@ -103,7 +105,7 @@ docker-compose up -d
 - **이벤트 상태 관리**:
 
   - DRAFT, ACTIVE, INACTIVE, COMPLETED 상태로 명확한 이벤트 라이프사이클 관리
-  - 이벤트 시작일/종료일 검증으로 유효한 이벤트 기간 보장
+  - 이벤트 시작일/종료일 저장하여 이벤트 조건 검사등에 활용
 
 - **조건 검증 시스템**:
 
@@ -121,19 +123,20 @@ docker-compose up -d
 - **RESTful API + Message Pattern**:
   - 마이크로서비스 간 통신을 위한 Message Pattern 사용
   - 명확한 커맨드 기반의 API 설계 (create_reward, find_rewards_by_event 등)
-  - DTO를 통한 엄격한 데이터 검증
+  - 간단한 설정 변경만으로 TCP, RMQ, Kafka 등으로 통신 방식 변경 가능 
 
 ### 4. 데이터베이스 선택
 
 - **MongoDB**:
-  - 스키마 유연성으로 다양한 이벤트 조건 저장 가능
-  - Aggregation Pipeline을 통한 복잡한 쿼리 처리
-  - 이벤트-보상 관계의 효율적인 조회
+  - 기획이 변경되어도 유연한 스키마 설계 가능(필드 추가/삭제 용이)
+  - 스키마 유연성으로 다양한 이벤트 조건 저장 가능 ()
 
 ### 5. 보안 설계
 
 - **JWT 기반 인증**:
   - Stateless 인증으로 서버 확장성 확보
+  - 별도의 세션 관리 필요 없음
+  - 다중 서버 환경에서도 유연하게 동작
   - Role 기반 접근 제어 (OPERATOR, AUDITOR, ADMIN)
   - API Gateway를 통한 중앙화된 인증/인가
 
@@ -142,12 +145,12 @@ docker-compose up -d
 #### 6.1 도입 배경
 
 - TCP 기반 통신의 한계:
-  - Auth Server 장애 시 메시지 유실 문제
+  - 특정 서버 장애 시 메시지 유실 문제 발생
   - 서비스 간 강한 결합도
   - 장애 상황에서의 복구 어려움
 
 #### 6.2 RabbitMQ 구현
-
+- 아래와 같이 간단한 설정 변경만으로 TCP 방식에서 RabbitMQ 방식으로 변경 가능
 - **Gateway Server의 Auth Proxy Module**:
 
   ```typescript
@@ -170,36 +173,13 @@ docker-compose up -d
   })
   ```
 
-- **Event Server의 Auth Client Module**:
-
-  ```typescript
-  @Module({
-    imports: [
-      ClientsModule.registerAsync([
-        {
-          name: 'AUTH_SERVICE',
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: (configService: ConfigService) => ({
-            transport: Transport.RMQ,
-            options: {
-              urls: configService.getOrThrow('RABBITMQ_URI'),
-              queue: 'auth',
-            },
-          }),
-        },
-      ]),
-    ],
-  })
-  ```
-
-- **Event Server의 메인 설정**:
+- **Auth Server의 메인 설정**:
   ```typescript
   const options: RmqOptions = {
     transport: Transport.RMQ,
     options: {
       urls: configService.getOrThrow("RABBITMQ_URI"),
-      queue: "event",
+      queue: "auth",
     },
   };
   ```
@@ -243,36 +223,148 @@ docker-compose up -d
   - 새로운 서비스 추가 용이
   - 부하 분산 용이
 
-#### 6.6 향후 개선 사항
-
-- **메시지 큐 고도화**:
-
-  - Dead Letter Queue 도입
-  - 메시지 우선순위 설정
-  - 메시지 TTL 설정
-
-- **모니터링 강화**:
-  - 큐 크기 모니터링
-  - 메시지 처리 지연 시간 추적
-  - 장애 상황 알림 시스템 구축
 
 ### 7. keySet 페이징 도입
 - **기존 페이징 방식**:
   - Offset 기반 페이징 (SKIP, LIMIT)
-  - 대량 데이터 처리 시 성능 저하
-  - 필요없는 데이터를 메모리에 로드 하고 버리는 비효율적인 동작방식
+  - SKIP 할 데이터를 메모리에 로드 하고 버리는 비효율적인 동작방식
   - 데이터가 많아질수록 성능 저하 심화
 
-- **keySet 페이징**:
 - **keySet 기반 페이징**:
   - 이전 페이지의 마지막 키를 기준으로 다음 페이지 조회
   - 성능 향상 및 데이터 일관성 보장
   - MongoDB의 `_id` 필드를 기준으로 구현
   - 데이터가 많아지더라도 limit 만큼의 데이터만 메모리에 로드
+  - 몽고 db의 '_id' 필드는 시간순으로 정렬되어 있어, 최근 데이터를 쉽게 조회 가능 (별도의 createdAt 인덱싱 불필요)
 
-### 8. 향후 개선 사항
+### 8. 조건 검증 방식
+
+#### 8.1 조건 구조
+```typescript
+interface EventCondition {
+    type: ConditionType;    // 조건 타입 (LOGIN_COUNT, PURCHASE_AMOUNT 등)
+    value: number;          // 조건 값 (횟수, 금액 등)
+    description: string;    // 조건 설명
+}
+
+enum ConditionType {
+    LOGIN_COUNT = 'LOGIN_COUNT',           // 로그인 횟수
+    PURCHASE_AMOUNT = 'PURCHASE_AMOUNT',   // 구매 금액
+    ATTENDANCE_COUNT = 'ATTENDANCE_COUNT', // 출석 횟수
+    // 향후 확장 가능한 조건 타입들...
+}
+```
+
+#### 8.2 확장성 고려사항
+- 새로운 조건 타입 추가가 용이한 구조
+- 각 조건 타입별 검증 로직 분리
+- 조건 값의 유연한 설정 가능
+
+### 9. 출석 집계 시스템
+
+#### 9.1 출석 데이터 저장
+```typescript
+// User 스키마
+@Schema()
+export class User {
+    @Prop({ type: [Date] })
+    attendanceDates: Date[];  // 출석 날짜 배열
+}
+
+// 출석 기록 로직
+async recordAttendance(userId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);  // 시간 정보 제거
+
+    await this.userModel.updateOne(
+        { _id: userId },
+        { $addToSet: { attendanceDates: today } }  // 중복 제거하며 날짜 추가
+    );
+}
+```
+
+#### 9.2 출석 횟수 집계
+```typescript
+async countAttendancesInPeriod(userId: string, startDate: Date, endDate: Date): Promise<number> {
+    // 시간 정보 제거
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    // 기간 내 출석 횟수 계산
+    const result = await this.userModel.aggregate([
+        // 해당 사용자 찾기
+        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+
+        // 배열 필드를 개별 문서로 분해
+        { $unwind: '$attendanceDates' },
+
+        // 날짜 범위 필터링
+        { $match: {
+            attendanceDates: {
+                $gte: startDate,
+                $lte: endDate
+            }
+        }},
+
+        // 개수 세기
+        { $count: 'total' }
+    ]);
+
+    return result.length > 0 ? result[0].total : 0;
+}
+```
+
+#### 9.3 이벤트 조건 검증
+```typescript
+async validateEventCondition(userId: string, event: Event): Promise<boolean> {
+    const now = new Date();
+    
+    // 이벤트 기간 체크
+    if (now < event.startDate || now > event.endDate) {
+        return false;
+    }
+
+    // 각 조건별 검증
+    for (const condition of event.conditions) {
+        switch (condition.type) {
+            case ConditionType.LOGIN_COUNT:
+                const loginCount = await this.countAttendancesInPeriod(
+                    userId,
+                    event.startDate,
+                    event.endDate
+                );
+                if (loginCount < condition.value) {
+                    return false;
+                }
+                break;
+            // 다른 조건 타입들에 대한 검증 로직...
+        }
+    }
+
+    return true;
+}
+```
+
+#### 9. 시스템 장점
+
+#### 9.4 데이터 저장 효율성
+- `$addToSet`을 사용하여 중복 출석 기록 방지
+- 날짜만 저장하여 저장 공간 최적화
+- 시간 정보 제거로 정확한 일별 출석 집계
+
+#### 9.5 검증 성능
+- MongoDB의 집계 파이프라인을 활용한 효율적인 집계
+- 인덱스를 활용한 빠른 검색
+- 메모리 사용 최적화
+
+#### 9.6 확장성
+- 새로운 조건 타입 추가가 용이
+- 조건 검증 로직의 모듈화
+- 다양한 이벤트 조건 지원
+
+### 10 향후 개선 사항
 
 - 보상 지급 처리 로직 구현
-- 메시지 큐 도입을 통한 비동기 처리 강화
-- 모니터링 및 로깅 시스템 구축
-- 테스트 자동화 강화
+- db 인덱스 최적화
+- 트랜잭션 적용
+- 단일 장애점 제거 (현재 : 게이트웨이 서버, 레빗mq )

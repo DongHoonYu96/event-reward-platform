@@ -24,6 +24,7 @@ export class User extends Document {
 
     // 출석 기록 - 날짜 문자열 배열 ('YYYY-MM-DD' 형식) for unique date
     @Prop({ type: [String], default: [] })
+    @Prop({index: true})
     attendanceDates: string[];
 
     @Prop({ default: Date.now })
