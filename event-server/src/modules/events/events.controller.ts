@@ -13,7 +13,7 @@ export class EventsController {
 
     // HTTP 엔드포인트 추가
     @ApiOperation({ summary: '이벤트 생성' })
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @ApiResponse({
         status: 201,
         description: '이벤트 생성 성공',
@@ -54,7 +54,7 @@ export class EventsController {
     }
 
     @ApiOperation({ summary: '이벤트 수정' })
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @ApiParam({ name: 'id', description: '이벤트 ID' })
     @ApiResponse({
         status: 200,
@@ -67,7 +67,7 @@ export class EventsController {
     }
 
     @ApiOperation({ summary: '이벤트 삭제' })
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @ApiParam({ name: 'id', description: '이벤트 ID' })
     @ApiResponse({
         status: 200,
