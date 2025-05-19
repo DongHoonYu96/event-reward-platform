@@ -84,28 +84,31 @@ docker-compose up -d
 - Auth API: http://localhost:3001
 - Event API: http://localhost:3002
 
-## API 문서
 
-각 서버의 API 문서는 Swagger를 통해 확인할 수 있습니다:
 
-- Gateway API 문서: http://localhost:3000/api
-- Auth API 문서: http://localhost:3001/api
-- Event API 문서: http://localhost:3002/api
+### 인증
+
+- 모든 API는 JWT 토큰을 통한 인증이 필요합니다 (로그인, 회원가입 제외)
+- 토큰은 `Authorization: Bearer {token}` 형식으로 전달해야 합니다
 
 ## 설계 선택 이유
 
 ### 1. MSA (Microservice Architecture) 선택 이유
+
 - **서비스 분리**:
   - 인증/사용자 관리(Auth Server)와 이벤트/보상 관리(Event Server)를 분리
   - 각 서비스의 독립적인 배포와 확장 가능
   - 서비스별 장애 격리로 전체 시스템 안정성 향상
 
 ### 2. 이벤트/보상 시스템 설계
+
 - **이벤트 상태 관리**:
+
   - DRAFT, ACTIVE, INACTIVE, COMPLETED 상태로 명확한 이벤트 라이프사이클 관리
   - 이벤트 시작일/종료일 검증으로 유효한 이벤트 기간 보장
 
 - **조건 검증 시스템**:
+
   - 다양한 조건 타입 지원 (CONTINUOUS_LOGIN, FRIEND_INVITE, CUSTOM)
   - MongoDB Aggregation Pipeline을 활용한 효율적인 조건 검증
   - 실패한 청구에 대한 상세 로깅 및 추적
@@ -116,24 +119,28 @@ docker-compose up -d
   - 보상 지급 실패 시 재시도 메커니즘 구현 예정
 
 ### 3. API 구조 선택
+
 - **RESTful API + Message Pattern**:
   - 마이크로서비스 간 통신을 위한 Message Pattern 사용
   - 명확한 커맨드 기반의 API 설계 (create_reward, find_rewards_by_event 등)
   - DTO를 통한 엄격한 데이터 검증
 
 ### 4. 데이터베이스 선택
+
 - **MongoDB**:
   - 스키마 유연성으로 다양한 이벤트 조건 저장 가능
   - Aggregation Pipeline을 통한 복잡한 쿼리 처리
   - 이벤트-보상 관계의 효율적인 조회
 
 ### 5. 보안 설계
+
 - **JWT 기반 인증**:
   - Stateless 인증으로 서버 확장성 확보
   - Role 기반 접근 제어 (OPERATOR, AUDITOR, ADMIN)
   - API Gateway를 통한 중앙화된 인증/인가
 
 ### 6. 향후 개선 사항
+
 - 보상 지급 처리 로직 구현
 - 메시지 큐 도입을 통한 비동기 처리 강화
 - 모니터링 및 로깅 시스템 구축

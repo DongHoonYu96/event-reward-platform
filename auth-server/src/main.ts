@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import {MicroserviceOptions, RmqOptions, TcpOptions, Transport} from "@nestjs/microservices";
+import {MicroserviceOptions, RmqOptions, Transport} from "@nestjs/microservices";
 import {Logger, ValidationPipe} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
+import {DocumentBuilder, SwaggerModule} from "@nestjs/swagger";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,13 +15,15 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  // const options : TcpOptions = {
-  //   transport: Transport.TCP,
-  //   options: {
-  //     host: configService.get('MS_HOST'),
-  //     port: +configService.get('MS_PORT'),
-  //   },
-  // };
+  const config = new DocumentBuilder()
+      .setTitle('Auth Service API')
+      .setDescription('인증 서비스 API 문서')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   const options : RmqOptions = {
     transport: Transport.RMQ,
@@ -34,7 +37,7 @@ async function bootstrap() {
 
   app.connectMicroservice<MicroserviceOptions>(options);
   await app.startAllMicroservices();
-  // await app.listen(port);
+  await app.listen(port);
 
   Logger.log(
       `🚀 Auth Application is running on: TCP ${JSON.stringify(

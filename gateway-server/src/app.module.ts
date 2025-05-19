@@ -8,6 +8,8 @@ import {JwtStrategy} from "./modules/strategies/jwt.strategy";
 import {AuthProxyModule} from "./modules/proxy/auth-proxy/auth-proxy.module";
 import {RolesGuard} from "./common/guards/roles.guard";
 import {EventProxyModule} from "./modules/proxy/event-proxy/event-proxy.module";
+import {AppController} from "./app.controller";
+import {AppService} from "./app.service";
 
 @Module({
   imports: [
@@ -28,7 +30,9 @@ import {EventProxyModule} from "./modules/proxy/event-proxy/event-proxy.module";
     AuthProxyModule,
       EventProxyModule
   ],
+  controllers: [AppController],
   providers: [
+      AppService,
     JwtStrategy,
     {
       provide: APP_GUARD,

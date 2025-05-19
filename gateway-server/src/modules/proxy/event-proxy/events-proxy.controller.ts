@@ -3,6 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import {EventStatus} from "../../../common/consts/enums";
 import {Roles, UserRole} from "../../../common/decorators/roles.decorator";
 import {IsPublic} from "../../../common/decorators/is-public.decorator";
+import {ApiOperation, ApiQuery} from "@nestjs/swagger";
 
 @Controller('EVENT-SERVICE/events')
 export class EventsProxyController {
@@ -20,6 +21,13 @@ export class EventsProxyController {
         );
     }
 
+    @ApiOperation({ summary: '이벤트 목록 조회' })
+    @ApiQuery({
+        name: 'status',
+        required: false,
+        enum: EventStatus,
+        description: '이벤트 상태로 필터링 (선택사항)'
+    })
     @Get()
     @IsPublic()
     findAll(@Query('status') status: EventStatus) {
