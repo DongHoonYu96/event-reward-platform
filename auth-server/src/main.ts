@@ -44,7 +44,8 @@ async function bootstrap() {
     },
   };
 
-  const port = configService.get('port');
+  const port = configService.get('PORT') || 3001;
+  Logger.log(`Auth Service is running on port ${port}`);
 
   app.connectMicroservice<MicroserviceOptions>(options);
   await app.startAllMicroservices();

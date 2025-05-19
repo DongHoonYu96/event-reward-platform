@@ -43,7 +43,7 @@ services:
     build:
       context: ./gateway-server
       dockerfile: Dockerfile
-      target: development
+#      target: development
     command: npm run start:dev
     container_name: gateway-server
     restart: no
@@ -56,6 +56,7 @@ services:
     env_file:
       - /gateway-server/.env.docker
     depends_on:
+      - rabbitmq
       - mongodb-auth
       - mongodb-event
     networks:
@@ -65,7 +66,7 @@ services:
     build:
       context: ./auth-server
       dockerfile: Dockerfile
-      target: development
+#      target: development
     command: npm run start:dev
     container_name: auth-server
     restart: no
@@ -78,6 +79,7 @@ services:
     env_file:
       - /auth-server/.env.docker
     depends_on:
+      - rabbitmq
       - mongodb-auth
     networks:
       - event-network
@@ -86,7 +88,7 @@ services:
     build:
       context: ./event-server
       dockerfile: Dockerfile
-      target: development
+#      target: development
     command: npm run start:dev
     container_name: event-server
     restart: no
@@ -97,6 +99,7 @@ services:
     env_file:
       - /event-server/.env.docker
     depends_on:
+      - rabbitmq
       - mongodb-event
     networks:
       - event-network

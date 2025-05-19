@@ -50,7 +50,7 @@ async function bootstrap() {
         },
     };
 
-    const port = configService.get('port');
+    const port = configService.get('PORT') || 3002;
 
     const iNestMicroservice = app.connectMicroservice<MicroserviceOptions>(options);
     iNestMicroservice.useGlobalPipes(
