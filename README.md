@@ -40,9 +40,6 @@ flowchart TB
     GW --> GAUTH
     GAUTH --> GROUTE
 
-    GROUTE --> AUTH
-    GROUTE --> EVENT
-
     AUTH --> USER_DB
     AUTH --> JWT
     AUTH --> ROLE
@@ -242,16 +239,16 @@ docker-compose up -d
 #### 8.1 조건 구조
 ```typescript
 interface EventCondition {
-    type: ConditionType;    // 조건 타입 (LOGIN_COUNT, PURCHASE_AMOUNT 등)
+    type: ConditionType;    // 조건 타입 (CONTINUOUS_LOGIN, FRIEND_INVITE 등)
     value: number;          // 조건 값 (횟수, 금액 등)
     description: string;    // 조건 설명
 }
 
-enum ConditionType {
-    LOGIN_COUNT = 'LOGIN_COUNT',           // 로그인 횟수
-    PURCHASE_AMOUNT = 'PURCHASE_AMOUNT',   // 구매 금액
-    ATTENDANCE_COUNT = 'ATTENDANCE_COUNT', // 출석 횟수
-    // 향후 확장 가능한 조건 타입들...
+export enum ConditionType {
+    CONTINUOUS_LOGIN = 'CONTINUOUS_LOGIN',
+    FRIEND_INVITE = 'FRIEND_INVITE',
+    CUSTOM = 'CUSTOM',
+    // 향후 확장 가능
 }
 ```
 
@@ -267,8 +264,8 @@ enum ConditionType {
 // User 스키마
 @Schema()
 export class User {
-    @Prop({ type: [Date] })
-    attendanceDates: Date[];  // 출석 날짜 배열
+    @Prop({ type: [String], default: [] })
+    attendanceDates: string[];
 }
 
 // 출석 기록 로직
@@ -314,56 +311,8 @@ async countAttendancesInPeriod(userId: string, startDate: Date, endDate: Date): 
 }
 ```
 
-#### 9.3 이벤트 조건 검증
-```typescript
-async validateEventCondition(userId: string, event: Event): Promise<boolean> {
-    const now = new Date();
-    
-    // 이벤트 기간 체크
-    if (now < event.startDate || now > event.endDate) {
-        return false;
-    }
-
-    // 각 조건별 검증
-    for (const condition of event.conditions) {
-        switch (condition.type) {
-            case ConditionType.LOGIN_COUNT:
-                const loginCount = await this.countAttendancesInPeriod(
-                    userId,
-                    event.startDate,
-                    event.endDate
-                );
-                if (loginCount < condition.value) {
-                    return false;
-                }
-                break;
-            // 다른 조건 타입들에 대한 검증 로직...
-        }
-    }
-
-    return true;
-}
-```
-
-#### 9. 시스템 장점
-
-#### 9.4 데이터 저장 효율성
-- `$addToSet`을 사용하여 중복 출석 기록 방지
-- 날짜만 저장하여 저장 공간 최적화
-- 시간 정보 제거로 정확한 일별 출석 집계
-
-#### 9.5 검증 성능
-- MongoDB의 집계 파이프라인을 활용한 효율적인 집계
-- 인덱스를 활용한 빠른 검색
-- 메모리 사용 최적화
-
-#### 9.6 확장성
-- 새로운 조건 타입 추가가 용이
-- 조건 검증 로직의 모듈화
-- 다양한 이벤트 조건 지원
-
 ### 10 향후 개선 사항
-
+- 출석 횟수 체크를 위한 더 빠르고 효율적인 방법 구현
 - 보상 지급 처리 로직 구현
 - db 인덱스 최적화
 - 트랜잭션 적용
