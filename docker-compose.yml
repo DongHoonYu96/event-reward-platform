@@ -1,15 +1,29 @@
 services:
-  mongodb:
+  mongodb-auth:
     image: mongo:latest
-    container_name: mongodb
-    restart: always
+    container_name: mongodb-auth
+    restart: no
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: 1234
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_auth_data:/data/db
+    networks:
+      - event-network
+
+  mongodb-event:
+    image: mongo:latest
+    container_name: mongodb-event
+    restart: no
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1234
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_event_data:/data/db
     networks:
       - event-network
 
@@ -35,14 +49,15 @@ services:
     restart: no
     ports:
       - "3004:3004"
-    volumes:
-#      - .:/var/app
-      - ./gateway-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
-#      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
+#    volumes:
+##      - .:/var/app
+#      - ./gateway-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
+##      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
     env_file:
-      - /gateway-server/.env
+      - /gateway-server/.env.docker
     depends_on:
-      - mongodb
+      - mongodb-auth
+      - mongodb-event
     networks:
       - event-network
 
@@ -56,14 +71,14 @@ services:
     restart: no
     ports:
       - "3001:3001"
-    volumes:
-#      - .:/var/app
-      - ./auth-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
-#      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
+#    volumes:
+##      - .:/var/app
+#      - ./auth-server:/var/app  # 로컬 코드를 컨테이너 내부로 마운트
+##      - var/app/node_modules      # node_modules는 컨테이너 내부 것 사용
     env_file:
-      - /auth-server/.env
+      - /auth-server/.env.docker
     depends_on:
-      - mongodb
+      - mongodb-auth
     networks:
       - event-network
 
@@ -77,12 +92,12 @@ services:
     restart: no
     ports:
       - "3002:3002"
-    volumes:
-      - ./event-server:/var/app
+#    volumes:
+#      - ./event-server:/var/app
     env_file:
-      - /event-server/.env
+      - /event-server/.env.docker
     depends_on:
-      - mongodb
+      - mongodb-event
     networks:
       - event-network
 
@@ -91,5 +106,6 @@ networks:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  mongodb_auth_data:
+  mongodb_event_data:
 
