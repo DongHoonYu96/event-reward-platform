@@ -1,14 +1,17 @@
-import {Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Request, Query} from '@nestjs/common';
+import {Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Request, Query, Logger} from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventStatus } from './schemas/event.schema';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {KeySetPaginationDto} from "../../common/dto/keyset-pagination.dto";
+import {plainToClass} from "class-transformer";
 
 @ApiTags('이벤트')
 @Controller('events')
 export class EventsController {
+    private readonly logger = new Logger(EventsController.name);
     constructor(private readonly eventsService: EventsService) {}
 
     // HTTP 엔드포인트 추가
@@ -37,8 +40,9 @@ export class EventsController {
         type: [CreateEventDto]
     })
     @Get()
-    async findAllHttp(@Query('status') status: EventStatus) {
-        return this.findAll({ status });
+    async findAllHttp(@Query('status') status: EventStatus,
+                      @Query() paginationDto: KeySetPaginationDto) {
+        return this.findAll({ status, paginationDto });
     }
 
     @ApiOperation({ summary: '이벤트 상세 조회' })
@@ -85,8 +89,11 @@ export class EventsController {
     }
 
     @MessagePattern({ cmd: 'find_all_events' })
-    findAll(@Payload() data: { status?: EventStatus }) {
-        return this.eventsService.findAll(data.status);
+    findAll(@Payload()  data: {  status: EventStatus; paginationDto: KeySetPaginationDto;}) {
+        // todo : @Payload에서 class-transformer 가 적용되지 않는 이유를 찾아야 함
+        const paginationDto = plainToClass(KeySetPaginationDto, data.paginationDto);
+        this.logger.debug(`이벤트 목록 조회: status=${data.status}, paginationDto=${JSON.stringify(data.paginationDto)}`);
+        return this.eventsService.findAll(data.status, paginationDto);
     }
 
     @MessagePattern({ cmd: 'find_one_event' })

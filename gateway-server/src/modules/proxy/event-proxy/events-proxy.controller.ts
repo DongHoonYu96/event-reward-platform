@@ -4,6 +4,7 @@ import {EventStatus} from "../../../common/consts/enums";
 import {Roles, UserRole} from "../../../common/decorators/roles.decorator";
 import {IsPublic} from "../../../common/decorators/is-public.decorator";
 import {ApiOperation, ApiQuery} from "@nestjs/swagger";
+import {PaginationParams} from "../../../common/interfaces/pagination.interface";
 
 @Controller('EVENT-SERVICE/events')
 export class EventsProxyController {
@@ -30,10 +31,11 @@ export class EventsProxyController {
     })
     @Get()
     @IsPublic()
-    findAll(@Query('status') status: EventStatus) {
+    findAll(@Query('status') status: EventStatus,
+            @Query() paginationDto: PaginationParams) {
         return this.eventProxy.send(
             { cmd: 'find_all_events' },
-            { status }
+            { status, paginationDto }
         );
     }
 

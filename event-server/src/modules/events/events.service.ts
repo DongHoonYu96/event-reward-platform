@@ -1,13 +1,16 @@
 // src/modules/events/events.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {Injectable, NotFoundException, BadRequestException, Logger} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import {Model, Types} from 'mongoose';
 import { Event, EventStatus } from './schemas/event.schema';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import {KeySetPaginationDto} from "../../common/dto/keyset-pagination.dto";
+import {KeySetPaginationResultDto} from "../../common/dto/keyset-pagination-result.dto";
 
 @Injectable()
 export class EventsService {
+    private readonly logger = new Logger(EventsService.name);
     constructor(
         @InjectModel(Event.name) private readonly eventModel: Model<Event>,
     ) {}
@@ -25,11 +28,47 @@ export class EventsService {
         return createdEvent.save();
     }
 
+    async findAll(
+        status?: EventStatus,
+        paginationDto?: KeySetPaginationDto
+    ): Promise<KeySetPaginationResultDto<Event>> {
+        const { lastId, limit = 10 } = paginationDto || {};
 
-    async findAll(status?: EventStatus): Promise<any[]> {
-        const matchStage = status ? { status } : {};
+        this.logger.debug(`이벤트 목록 조회: status=${status}, lastId=${lastId}, limit=${limit}`);
+        this.logger.debug('타입 체크: ' + typeof limit);
 
-        return this.findAllWithRewards(matchStage);
+        const query: any = {};
+        if (status) {
+            query.status = status;
+        }
+        if (lastId) {
+            query._id = { $lt: new Types.ObjectId(lastId) };
+        }
+
+        const items = await this.eventModel.aggregate([
+            { $match: query },
+            {
+                $lookup: {
+                    from: 'rewards',
+                    localField: '_id',
+                    foreignField: 'eventId',
+                    as: 'rewards'
+                }
+            },
+            { $sort: { _id: -1 } },
+            { $limit: limit + 1 }  // 다음 페이지 존재 여부 확인을 위해 +1
+        ]).exec();
+
+        const hasMore = items.length > limit;
+        if (hasMore) {
+            items.pop();  // 마지막 항목 제거
+        }
+
+        return {
+            items,
+            nextCursor: items.length > 0 ? items[items.length - 1]._id.toString() : undefined,
+            hasMore
+        };
     }
 
     async findOne(id: string): Promise<Event> {
