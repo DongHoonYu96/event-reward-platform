@@ -1,19 +1,19 @@
 import {
-    Injectable,
-    NotFoundException,
     BadRequestException,
     ForbiddenException,
+    HttpStatus,
     Inject,
+    Injectable,
     Logger,
-    HttpStatus
+    NotFoundException
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Claim, ClaimStatus } from './schemas/claim.schema';
-import { CreateClaimDto } from './dto/create-claim.dto';
-import { ProcessClaimDto } from './dto/process-claim.dto';
-import { EventsService } from '../events/events.service';
-import { RewardsService } from '../rewards/rewards.service';
+import {InjectModel} from '@nestjs/mongoose';
+import {Model, Types} from 'mongoose';
+import {Claim, ClaimStatus} from './schemas/claim.schema';
+import {CreateClaimDto} from './dto/create-claim.dto';
+import {ProcessClaimDto} from './dto/process-claim.dto';
+import {EventsService} from '../events/events.service';
+import {RewardsService} from '../rewards/rewards.service';
 import {ClientProxy, RpcException} from "@nestjs/microservices";
 import {Event, EventCondition, EventStatus} from "../events/schemas/event.schema";
 import {firstValueFrom} from "rxjs";
@@ -261,7 +261,16 @@ export class ClaimsService {
         this.logger.log('event.startDate: ' + event.startDate);
         this.logger.log('event.endDate: ' + event.endDate);
         this.logger.log('userId: ' + userId);
-        const userConsecutiveDays = await this.authClient.send(
+        const userConsecutiveDays = await this.getUserConsecutiveDaysFrom(userId, event);
+
+        this.logger.log(`User ${userId} has logged in for ${userConsecutiveDays.loginCnt} consecutive days.`);
+        this.logger.log(`Required consecutive days: ${requiredDays}`);
+
+        return userConsecutiveDays.loginCnt >= requiredDays;
+    }
+
+    private async getUserConsecutiveDaysFrom(userId: string, event: Event) {
+        return await this.authClient.send(
             {cmd: 'get_user_login_cnt'},
             {
                 userId: userId,
@@ -270,11 +279,6 @@ export class ClaimsService {
             }
         ).toPromise(
         ) || 0;
-
-        this.logger.log(`User ${userId} has logged in for ${userConsecutiveDays.loginCnt} consecutive days.`);
-        this.logger.log(`Required consecutive days: ${requiredDays}`);
-
-        return userConsecutiveDays.loginCnt >= requiredDays;
     }
 
     private async checkFriendInvites(userId: string, condition: EventCondition): Promise<boolean> {

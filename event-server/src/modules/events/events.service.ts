@@ -25,10 +25,6 @@ export class EventsService {
         return createdEvent.save();
     }
 
-    // async findAll(status?: EventStatus): Promise<Event[]> {
-    //     const query = status ? { status } : {};
-    //     return this.eventModel.find(query).exec();
-    // }
 
     async findAll(status?: EventStatus): Promise<any[]> {
         const matchStage = status ? { status } : {};
@@ -66,63 +62,6 @@ export class EventsService {
         if (result.deletedCount === 0) {
             throw new NotFoundException(`ID가 ${id}인 이벤트를 찾을 수 없습니다`);
         }
-    }
-
-    // 이벤트 조건 검증 로직
-    async verifyEventConditions(userId: string, eventId: string): Promise<boolean> {
-        const event = await this.findOne(eventId);
-
-        // 이벤트가 활성 상태인지 확인
-        if (event.status !== EventStatus.ACTIVE) {
-            return false;
-        }
-
-        // 이벤트 기간이 유효한지 확인
-        const now = new Date();
-        if (now < new Date(event.startDate) || now > new Date(event.endDate)) {
-            return false;
-        }
-
-        // 이벤트 조건 검증 로직 (예시)
-        // 실제로는 외부 서비스나 DB 쿼리를 통해 사용자의 조건 충족 여부를 확인
-        for (const condition of event.conditions) {
-            const isConditionMet = await this.checkCondition(userId, condition);
-            if (!isConditionMet) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private async checkCondition(userId: string, condition: any): Promise<boolean> {
-        // 조건 유형에 따른 검증 로직
-        switch (condition.type) {
-            case 'CONTINUOUS_LOGIN':
-                return this.checkLoginStreak(userId, condition.value);
-            case 'FRIEND_INVITE':
-                return this.checkFriendInvites(userId, condition.value);
-            case 'CUSTOM':
-                return this.checkCustomCondition(userId, condition);
-            default:
-                return false;
-        }
-    }
-
-    // 이 메서드들은 실제 구현에서는 사용자 활동을 추적하는 데이터베이스를 조회해야 함
-    private async checkLoginStreak(userId: string, requiredDays: number): Promise<boolean> {
-        // 실제 구현: 사용자의 로그인 기록 확인
-        return true; // 예시로 항상 참 반환
-    }
-
-    private async checkFriendInvites(userId: string, requiredInvites: number): Promise<boolean> {
-        // 실제 구현: 사용자가 초대한 친구 수 확인
-        return true; // 예시로 항상 참 반환
-    }
-
-    private async checkCustomCondition(userId: string, condition: any): Promise<boolean> {
-        // 실제 구현: 커스텀 조건 확인 로직
-        return true; // 예시로 항상 참 반환
     }
 
     private findAllWithRewards(matchStage: { status: EventStatus } | {}) {
