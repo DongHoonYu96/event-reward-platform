@@ -1,6 +1,7 @@
 import {Body, Controller, Get, Inject, Param, Post, Put, Query, Request} from '@nestjs/common';
 import {ClientProxy} from '@nestjs/microservices';
 import {Roles, UserRole} from "../../../common/decorators/roles.decorator";
+import {PaginationParams} from "../../../common/interfaces/pagination.interface";
 
 @Controller('EVENT-SERVICE/claims')
 export class ClaimsProxyController {
@@ -24,10 +25,11 @@ export class ClaimsProxyController {
         @Query('status') status: string,
         @Query('eventId') eventId: string,
         @Query('userId') userId: string,
+        @Query() paginationDto: PaginationParams
     ) {
         return this.eventProxy.send(
             { cmd: 'find_all_claims' },
-            { status, eventId, userId }
+            { status, eventId, userId, paginationDto }
         );
     }
 

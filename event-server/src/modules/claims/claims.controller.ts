@@ -5,6 +5,8 @@ import { CreateClaimDto } from './dto/create-claim.dto';
 import { ProcessClaimDto } from './dto/process-claim.dto';
 import { ClaimStatus } from './schemas/claim.schema';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {KeySetPaginationDto} from "../../common/dto/keyset-pagination.dto";
+import {plainToClass} from "class-transformer";
 
 @ApiTags('보상 청구')
 @Controller('claims')
@@ -46,9 +48,10 @@ export class ClaimsController {
     async findAllHttp(
         @Query('status') status: ClaimStatus,
         @Query('eventId') eventId: string,
-        @Query('userId') userId: string
+        @Query('userId') userId: string,
+        @Query() paginationDto: KeySetPaginationDto
     ) {
-        return this.findAll({ status, eventId, userId });
+        return this.findAll({ status, eventId, userId , paginationDto});
     }
 
     @ApiOperation({ summary: '내 보상 청구 목록 조회' })
@@ -111,8 +114,14 @@ export class ClaimsController {
     }
 
     @MessagePattern({ cmd: 'find_all_claims' })
-    findAll(@Payload() data: { status?: ClaimStatus; eventId?: string; userId?: string }) {
-        return this.claimsService.findAll(data.status, data.eventId, data.userId);
+    findAll(@Payload() data: {
+        eventId: string;
+        paginationDto: KeySetPaginationDto;
+        userId: string;
+        status: ClaimStatus
+    }) {
+        const keySetPaginationDto = plainToClass(KeySetPaginationDto, data.paginationDto);
+        return this.claimsService.findAll(data.status, data.eventId, data.userId, keySetPaginationDto);
     }
 
     @MessagePattern({ cmd: 'find_my_claims' })

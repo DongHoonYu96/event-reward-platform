@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Put } from '@nestjs/common';
+import {Body, Controller, Delete, Get, Inject, Param, Post, Put, Query} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {Roles, UserRole} from "../../../common/decorators/roles.decorator";
 import {IsPublic} from "../../../common/decorators/is-public.decorator";
+import {PaginationParams} from "../../../common/interfaces/pagination.interface";
 
 @Controller('EVENT-SERVICE/rewards')
 export class RewardsProxyController {
@@ -21,7 +22,7 @@ export class RewardsProxyController {
 
     @Get('event/:eventId')
     @IsPublic()
-    findByEvent(@Param('eventId') eventId: string) {
+    findAllByEvent(@Param('eventId') eventId: string) {
         return this.eventProxy.send(
             { cmd: 'find_rewards_by_event' },
             eventId

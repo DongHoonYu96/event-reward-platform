@@ -17,6 +17,8 @@ import {RewardsService} from '../rewards/rewards.service';
 import {ClientProxy, RpcException} from "@nestjs/microservices";
 import {Event, EventCondition, EventStatus} from "../events/schemas/event.schema";
 import {firstValueFrom} from "rxjs";
+import {KeySetPaginationDto} from "../../common/dto/keyset-pagination.dto";
+import {KeySetPaginationResultDto} from "../../common/dto/keyset-pagination-result.dto";
 
 @Injectable()
 export class ClaimsService {
@@ -56,7 +58,10 @@ export class ClaimsService {
         status?: ClaimStatus,
         eventId?: string,
         userId?: string,
-    ): Promise<Claim[]> {
+        keySetPaginationDto?: KeySetPaginationDto
+    ): Promise<KeySetPaginationResultDto<Claim>> {
+        const { lastId, limit = 10 } = keySetPaginationDto || {};
+
         const query: any = {};
 
         if (status) {
@@ -71,10 +76,45 @@ export class ClaimsService {
             query.userId = userId;
         }
 
-        return this.claimModel.find(query)
-            .populate('eventId')
-            .populate('rewards')
-            .exec();
+        // lastId가 있는 경우 해당 ID보다 작은 ID를 가진 항목만 조회
+        if (lastId) {
+            query._id = { $lt: new Types.ObjectId(lastId) };
+        }
+
+        // populate를 포함한 aggregate 파이프라인 구성
+        const items = await this.claimModel.aggregate([
+            { $match: query },
+            {
+                $lookup: {
+                    from: 'events',
+                    localField: 'eventId',
+                    foreignField: '_id',
+                    as: 'eventId'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'rewards',
+                    localField: 'rewards',
+                    foreignField: '_id',
+                    as: 'rewards'
+                }
+            },
+            { $unwind: { path: '$eventId', preserveNullAndEmptyArrays: true } },
+            { $sort: { _id: -1 } },
+            { $limit: limit + 1 }  // 다음 페이지 존재 여부 확인을 위해 +1
+        ]).exec();
+
+        const hasMore = items.length > limit;
+        if (hasMore) {
+            items.pop();  // 마지막 항목 제거
+        }
+
+        return {
+            items,
+            nextCursor: items.length > 0 ? items[items.length - 1]._id.toString() : undefined,
+            hasMore
+        };
     }
 
     async findByUser(userId: string): Promise<Claim[]> {

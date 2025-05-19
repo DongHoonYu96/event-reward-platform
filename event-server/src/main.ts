@@ -1,7 +1,7 @@
-import { NestFactory } from '@nestjs/core';
+import {NestFactory} from '@nestjs/core';
 import {INestApplication, Logger, ValidationPipe} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
+import {ConfigService} from '@nestjs/config';
+import {AppModule} from './app.module';
 import {MicroserviceOptions, RmqOptions, Transport} from "@nestjs/microservices";
 import {DocumentBuilder, SwaggerModule} from "@nestjs/swagger";
 
@@ -29,46 +29,47 @@ function setUpSwaggerConfig(app: INestApplication<any>) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+    const app = await NestFactory.create(AppModule);
+    const configService = app.get(ConfigService);
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
-  }));
+    app.useGlobalPipes(new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        transformOptions: {
+            enableImplicitConversion: true,
+        },
+    }));
 
     setUpSwaggerConfig(app);
 
-    const options : RmqOptions = {
-    transport: Transport.RMQ,
-    options: {
-      urls: configService.getOrThrow('RABBITMQ_URI'),
-      queue: 'event',
-    },
-  };
+    const options: RmqOptions = {
+        transport: Transport.RMQ,
+        options: {
+            urls: configService.getOrThrow('RABBITMQ_URI'),
+            queue: 'event',
+        },
+    };
 
-  const port = configService.get('port');
+    const port = configService.get('port');
 
-  const iNestMicroservice = app.connectMicroservice<MicroserviceOptions>(options);
+    const iNestMicroservice = app.connectMicroservice<MicroserviceOptions>(options);
     iNestMicroservice.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
             transform: true,
-            transformOptions: { enableImplicitConversion: true },
+            transformOptions: {enableImplicitConversion: true},
         }),
     );
 
-  await app.startAllMicroservices();
-  await app.listen(port);
+    await app.startAllMicroservices();
+    await app.listen(port);
 
-  Logger.log(
-      `🚀 Event Application is running on: TCP ${JSON.stringify(
-          options,
-      )} with http ${port} port`,
-      'bootstrap-hybrid',
-  );
+    Logger.log(
+        `🚀 Event Application is running on: TCP ${JSON.stringify(
+            options,
+        )} with http ${port} port`,
+        'bootstrap-hybrid',
+    );
 }
+
 bootstrap();
