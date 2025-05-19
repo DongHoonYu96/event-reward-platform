@@ -80,8 +80,9 @@ docker-compose up -d
 3. 서비스 접근
 
 - Gateway Server: http://localhost:3004
-- Auth Server: http://localhost:3001 (swagger용 포트)
-- Event Server: http://localhost:3002 (swagger용 포트)
+- API 문서 : http://localhost:3004/api
+- Auth Server: rmq로 접근 (3001 : swagger용 포트)
+- Event Server: rmq로 접근 (3002 : swagger용 포트)
 
 ### 인증
 
@@ -120,8 +121,10 @@ docker-compose up -d
 - **RESTful API + Message Pattern**:
   - 마이크로서비스 간 통신을 위한 Message Pattern 사용
   - 명확한 커맨드 기반의 API 설계 (create_reward, find_rewards_by_event 등)
-  - 간단한 설정 변경만으로 TCP, RMQ, Kafka 등으로 통신 방식 변경 가능 
-
+  - 간단한 설정 변경만으로 TCP, RMQ, Kafka 등으로 통신 방식 변경 가능
+    ![Image](https://github.com/user-attachments/assets/07c2fc55-d702-4d9b-b543-8fabb4e25475)
+  - ![Image](https://github.com/user-attachments/assets/5b1b6769-1dc2-42d2-874f-82ef6257820b)
+    ![Image](https://github.com/user-attachments/assets/c20475b9-7017-4f74-8bf8-41ac8f27f427)
 ### 4. 데이터베이스 선택
 
 - **MongoDB**:
@@ -311,7 +314,22 @@ async countAttendancesInPeriod(userId: string, startDate: Date, endDate: Date): 
 }
 ```
 
-### 10 향후 개선 사항
+### 10. 핵심 로직인 보상 요청에 대해 e2e test 수행
+- 수행 방법
+```bash
+cd e2e
+docker compose up -d
+```
+- 시나리오
+  - Admin User 생성
+  - 일반 User 생성
+  - Admin 이 이벤트 생성
+  - Admin 이벤트에 대한 보상 생성
+  - 일반 User가 이벤트에 대한 보상 요청
+  - 조건에 따라 보상 지급 여부 확인 및 승인 기록
+
+
+### 11 향후 개선 사항
 - 출석 횟수 체크를 위한 더 빠르고 효율적인 방법 구현
 - 보상 지급 처리 로직 구현
 - db 인덱스 최적화
