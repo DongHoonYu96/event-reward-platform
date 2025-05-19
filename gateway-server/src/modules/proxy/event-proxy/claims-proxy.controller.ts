@@ -32,7 +32,7 @@ export class ClaimsProxyController {
     }
 
     @Get('my')
-    findMyClams(@Request() req) {
+    findMyClaims(@Request() req) {
         return this.eventProxy.send(
             { cmd: 'find_my_claims' },
             req.user?.userId
