@@ -335,3 +335,5 @@ docker compose up -d
 - db 인덱스 최적화
 - 트랜잭션 적용
 - 단일 장애점 제거 (현재 : 게이트웨이 서버, 레빗mq )
+- 단위,통합 테스트 및 e2e 테스트 추가
+- responseDto 적용
