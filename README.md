@@ -80,15 +80,13 @@ docker-compose up -d
 
 3. 서비스 접근
 
-- Gateway API: http://localhost:3000
+- Gateway API: http://localhost:3004
 - Auth API: http://localhost:3001
 - Event API: http://localhost:3002
 
-
-
 ### 인증
 
-- 모든 API는 JWT 토큰을 통한 인증이 필요합니다 (로그인, 회원가입 제외)
+- 모든 API는 JWT 토큰을 통한 인증이 필요합니다 (로그인, 회원가입, 이벤트-보상 조회 제외)
 - 토큰은 `Authorization: Bearer {token}` 형식으로 전달해야 합니다
 
 ## 설계 선택 이유
@@ -139,7 +137,126 @@ docker-compose up -d
   - Role 기반 접근 제어 (OPERATOR, AUDITOR, ADMIN)
   - API Gateway를 통한 중앙화된 인증/인가
 
-### 6. 향후 개선 사항
+### 6. 메시지 큐 도입
+
+#### 6.1 도입 배경
+
+- TCP 기반 통신의 한계:
+  - Auth Server 장애 시 메시지 유실 문제
+  - 서비스 간 강한 결합도
+  - 장애 상황에서의 복구 어려움
+
+#### 6.2 RabbitMQ 구현
+
+- **Gateway Server의 Auth Proxy Module**:
+
+  ```typescript
+  @Module({
+    imports: [
+      ClientsModule.registerAsync([
+        {
+          name: 'AUTH_SERVICE',
+          inject: [ConfigService],
+          useFactory: (configService: ConfigService) => ({
+            transport: Transport.RMQ,
+            options: {
+              urls: configService.getOrThrow('RABBITMQ_URI'),
+              queue: 'auth',
+            },
+          }),
+        },
+      ]),
+    ],
+  })
+  ```
+
+- **Event Server의 Auth Client Module**:
+
+  ```typescript
+  @Module({
+    imports: [
+      ClientsModule.registerAsync([
+        {
+          name: 'AUTH_SERVICE',
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (configService: ConfigService) => ({
+            transport: Transport.RMQ,
+            options: {
+              urls: configService.getOrThrow('RABBITMQ_URI'),
+              queue: 'auth',
+            },
+          }),
+        },
+      ]),
+    ],
+  })
+  ```
+
+- **Event Server의 메인 설정**:
+  ```typescript
+  const options: RmqOptions = {
+    transport: Transport.RMQ,
+    options: {
+      urls: configService.getOrThrow("RABBITMQ_URI"),
+      queue: "event",
+    },
+  };
+  ```
+
+#### 6.3 메시지 큐 동작 방식
+
+- **메시지 지속성**:
+
+  - RabbitMQ는 기본적으로 메시지를 디스크에 저장
+  - 서버 장애 시에도 메시지가 유실되지 않음
+  - 서버 재시작 시 자동으로 미처리된 메시지 처리
+
+- **서비스 간 통신**:
+  - Auth Service: 'auth' 큐를 통해 통신
+  - Event Service: 'event' 큐를 통해 통신
+  - Gateway Server: 두 큐 모두와 통신
+
+#### 6.4 장애 대응
+
+- **자동 복구**:
+
+  - 서버 장애 시 메시지는 RabbitMQ에 보관
+  - 서버 재시작 시 자동으로 미처리된 메시지 처리
+  - 별도의 재시도 로직 없이도 메시지 처리 보장
+
+- **서비스 독립성**:
+  - 각 서비스는 독립적인 큐를 사용
+  - 서비스 장애가 다른 서비스에 영향을 주지 않음
+  - 비동기 처리로 시스템 안정성 향상
+
+#### 6.5 도입 효과
+
+- **안정성 향상**:
+
+  - 서비스 장애 시 메시지 유실 방지
+  - 자동 복구 메커니즘
+  - 서비스 간 독립성 확보
+
+- **확장성 개선**:
+  - 서비스 간 느슨한 결합
+  - 새로운 서비스 추가 용이
+  - 부하 분산 용이
+
+#### 6.6 향후 개선 사항
+
+- **메시지 큐 고도화**:
+
+  - Dead Letter Queue 도입
+  - 메시지 우선순위 설정
+  - 메시지 TTL 설정
+
+- **모니터링 강화**:
+  - 큐 크기 모니터링
+  - 메시지 처리 지연 시간 추적
+  - 장애 상황 알림 시스템 구축
+
+### 7. 향후 개선 사항
 
 - 보상 지급 처리 로직 구현
 - 메시지 큐 도입을 통한 비동기 처리 강화
