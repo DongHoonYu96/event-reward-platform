@@ -19,7 +19,18 @@ async function bootstrap() {
       .setTitle('Event Service API')
       .setDescription('이벤트 서비스 API 문서')
       .setVersion('1.0')
-      .addBearerAuth()
+      .addBearerAuth(
+          {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            name: 'JWT',
+            description: 'Enter JWT token',
+            in: 'header',
+          },
+          'JWT-auth', // 이 이름은 컨트롤러의 @ApiBearerAuth() 데코레이터와 일치해야 함
+      )
+        .addServer('/EVENT-SERVICE')
       .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -55,7 +55,7 @@ export class UsersController {
     }
 
     @ApiOperation({ summary: '사용자 정보 조회' })
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')  // JWT 인증 필요 표시
     @ApiResponse({
         status: 200,
         description: '사용자 정보 조회 성공',
@@ -68,14 +68,13 @@ export class UsersController {
             }
         }
     })
-
     @Get('info')
     async getUserInfoHttp(@Request() req) {
         return this.getUserInfo(req.user.userId);
     }
 
     @ApiOperation({ summary: '로그인 횟수 조회' })
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @ApiResponse({
         status: 200,
         description: '로그인 횟수 조회 성공',
@@ -85,7 +84,6 @@ export class UsersController {
             }
         }
     })
-
     @Get('login-cnt')
     async getLoginCntHttp(@Request() req, @Body() data: { startDate: Date; endDate: Date }) {
         return this.getLoginCntBetweenEventDate({
