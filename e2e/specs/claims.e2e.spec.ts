@@ -13,6 +13,10 @@ describe('Claims', () => {
         rewardId = await createRewardFrom(adminJwt,eventId);
     });
 
+    afterEach(async () => {
+       //todo: tear down
+    });
+
     test('조건에 맞을경우 요청은 승인되어야 한다.', async () => {
         const claim = {
             eventId: eventId,
