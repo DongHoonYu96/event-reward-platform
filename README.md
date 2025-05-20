@@ -1,6 +1,6 @@
 # 이벤트/보상 관리 시스템
 
-NestJS 기반 MSA(Microservice Architecture) + MongoDB로 구현한 이벤트·보상 관리 플랫폼 예제 프로젝트입니다.
+NestJS 기반 MSA(Microservice Architecture) + MongoDB로 구현한 이벤트·보상 관리 플랫폼 프로젝트입니다.
 
 ---
 
@@ -37,8 +37,8 @@ docker-compose up -d
 
 * **Gateway**: [http://localhost:3004](http://localhost:3004)
 * **Swagger (Gateway)**: [http://localhost:3004/api](http://localhost:3004/api)
-* **Auth Server Swagger**: [http://localhost:3001](http://localhost:3001)
-* **Event Server Swagger**: [http://localhost:3002](http://localhost:3002)
+* **Auth Server**: TCP/RMQ로 접근 (3001 : swagger용 포트)
+* **Event Server**: TCP/RMQ로 접근 (3002 : swagger용 포트)
 
 ## 시스템 구조
 
@@ -63,7 +63,7 @@ flowchart TB
 
   subgraph Event
     EVT[Event Server]
-    DB_Event[(Event·Reward DB)]
+    DB_Event[(Event DB)]
     Reward_Module[보상 관리]
     Condition_Check[조건 검증]
   end
@@ -119,6 +119,8 @@ flowchart TB
 
 * 유연한 스키마로 이벤트·조건 필드 확장 용이
 * 게임 기획 변경에 따른 스키마 변경 용이
+* ERD
+- ![Image](https://github.com/user-attachments/assets/d74f64f5-9e0d-4974-bbb1-7ec95ebadb4e)
 
 ### REST + Message Pattern
 
