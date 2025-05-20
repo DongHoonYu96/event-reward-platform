@@ -120,7 +120,7 @@ flowchart TB
 * 유연한 스키마로 이벤트·조건 필드 확장 용이
 * 게임 기획 변경에 따른 스키마 변경 용이
 * ERD
-- ![Image](https://github.com/user-attachments/assets/d74f64f5-9e0d-4974-bbb1-7ec95ebadb4e)
+  - ![Image](https://github.com/user-attachments/assets/c48be900-879a-417d-a607-76e04e98f42b)
 
 ### REST + Message Pattern
 
