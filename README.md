@@ -1,331 +1,209 @@
 # 이벤트/보상 관리 시스템
 
-NestJS + MSA + MongoDB 기반의 이벤트/보상 관리 시스템입니다.
+NestJS 기반 MSA(Microservice Architecture) + MongoDB로 구현한 이벤트·보상 관리 플랫폼 예제 프로젝트입니다.
 
-## 시스템 구조
+---
 
-이 프로젝트는 다음과 같은 3개의 서버로 구성됩니다:
+## 목차
 
-1. **Gateway Server**: 모든 API 진입점, JWT 검증 및 역할(Role) 검사
-2. **Auth Server**: 사용자 관리, 인증, JWT 발급
-3. **Event Server**: 이벤트 관리, 보상 관리, 조건 검증
+1. [설치 및 실행](#설치-및-실행)
+2. [시스템 구조](#시스템-구조)
+3. [주요 기능](#주요-기능)
+4. [API 문서](#api-문서)
+5. [인증 및 권한 관리](#인증-및-권한-관리)
+6. [설계 선택 이유](#설계-선택-이유)
+7. [메시지 큐 구성](#메시지-큐-구성)
+8. [페이징 전략](#KeySet-기반-페이징-전략-도입)
+9. [조건 검증 방식](#조건-검증-방식)
+10. [테스트 시나리오](#테스트-시나리오)
+11. [향후 개선 사항](#향후-개선-사항)
 
-```mermaid
-flowchart TB
-    subgraph "클라이언트"
-        Client[클라이언트]
-    end
+---
 
-    subgraph "Gateway Server"
-        GW[API Gateway]
-        GAUTH[인증/권한 검증]
-        GROUTE[라우팅]
-    end
+## 설치 및 실행
 
-    subgraph "Auth Server"
-        AUTH[인증 서버]
-        USER_DB[(사용자 DB)]
-        JWT[JWT 관리]
-        ROLE[역할 관리]
-    end
+### 사전 요구조건
 
-    subgraph "Event Server"
-        EVENT[이벤트 관리]
-        REWARD[보상 관리]
-        REQ[보상 요청 처리]
-        EVENT_DB[(이벤트/보상 DB)]
-    end
+* Docker
+* Docker Compose
 
-    Client -- "HTTP" --> GW
-    GW --> GAUTH
-    GAUTH --> GROUTE
-
-    AUTH --> USER_DB
-    AUTH --> JWT
-    AUTH --> ROLE
-
-    EVENT --> EVENT_DB
-    EVENT --> REWARD
-    EVENT --> REQ
-
-    %% 통신 방식
-    GROUTE -- "TCP 또는 메시지 큐" --> AUTH
-    GROUTE -- "TCP 또는 메시지 큐" --> EVENT
-
-    
-```
-
-## 실행 방법
-
-### 사전 요구사항
-
-- Docker
-- Docker Compose
-
-### 설치 및 실행
-
-1. 저장소 클론
+### 프로젝트 클론 및 실행
 
 ```bash
 git clone https://github.com/DongHoonYu96/event-reward-platform.git
 cd event-reward-platform
-```
-
-2. Docker Compose로 서비스 시작
-
-```bash
 docker-compose up -d
 ```
 
-3. 서비스 접근
+* **Gateway**: [http://localhost:3004](http://localhost:3004)
+* **Swagger (Gateway)**: [http://localhost:3004/api](http://localhost:3004/api)
+* **Auth Server Swagger**: [http://localhost:3001](http://localhost:3001)
+* **Event Server Swagger**: [http://localhost:3002](http://localhost:3002)
 
-- Gateway Server: http://localhost:3004
-- API 문서 : http://localhost:3004/api
-- Auth Server: rmq로 접근 (3001 : swagger용 포트)
-- Event Server: rmq로 접근 (3002 : swagger용 포트)
+## 시스템 구조
 
-### 인증
+```mermaid
+flowchart TB
+  subgraph 클라이언트
+    Client[Client]
+  end
 
-- 모든 API는 JWT 토큰을 통한 인증이 필요합니다 (로그인, 회원가입, 이벤트-보상 조회 제외)
-- 토큰은 요청헤더에 `Authorization: Bearer {token}` 형식으로 전달해야 합니다
+  subgraph Gateway
+    GW[API Gateway]
+    AuthGuard[인증·권한 검증]
+    Router[요청 라우팅]
+  end
+
+  subgraph Auth
+    AUTH[Auth Server]
+    DB_User[(User DB)]
+    JWT_Manager[JWT 발급/검증]
+    Role_Manager[Role 관리]
+  end
+
+  subgraph Event
+    EVT[Event Server]
+    DB_Event[(Event·Reward DB)]
+    Reward_Module[보상 관리]
+    Condition_Check[조건 검증]
+  end
+
+  Client -->|HTTP| GW
+  GW --> AuthGuard --> Router
+  Router -- TCP/RMQ --> AUTH
+  Router -- TCP/RMQ --> EVT
+  AUTH --> DB_User
+  AUTH --> JWT_Manager
+  AUTH --> Role_Manager
+  EVT --> DB_Event
+  EVT --> Reward_Module
+  EVT --> Condition_Check
+```
+
+* **Gateway Server**: 모든 진입점, JWT 권한 검사, 라우팅 담당
+* **Auth Server**: 사용자 관리·인증·JWT 발급·Role 관리
+* **Event Server**: 이벤트·보상 CRUD, 조건 검사, 보상 요청 처리
+
+## 주요 기능
+
+* 이벤트 라이프사이클: DRAFT, ACTIVE, INACTIVE, COMPLETED
+* 조건 검증: CONTINUOUS\_LOGIN, FRIEND\_INVITE, CUSTOM 지원
+* 보상 타입: POINT, ITEM, COUPON 등
+* 출석 집계 및 기간별 통계
+* Keyset 페이징 지원
+
+
+## API 문서
+
+각 게이트웨이 서버의 Swagger UI를 통해 엔드포인트 및 요청·응답 예시 확인 가능.
+- ![Image](https://github.com/user-attachments/assets/07c2fc55-d702-4d9b-b543-8fabb4e25475)
+- ![Image](https://github.com/user-attachments/assets/5b1b6769-1dc2-42d2-874f-82ef6257820b)
+- ![Image](https://github.com/user-attachments/assets/c20475b9-7017-4f74-8bf8-41ac8f27f427)
+
+## 인증 및 권한 관리
+
+* JWT 기반 인증 (Bearer Token)
+* 헤더: `Authorization: Bearer <token>`
+* Role: `OPERATOR`, `AUDITOR`, `ADMIN` 등
+* Gateway에서 유저의 권한확인후, 인가 처리, 각각 서버의 엔드포인트로 라우팅
+* 단점 : Gateway에서 모든 서비스의 엔드포인트에 대해 의존성이 생기는 문제 
 
 ## 설계 선택 이유
 
-### 1. MSA (Microservice Architecture) 선택 이유
+### MSA 도입
 
-- **서비스 분리**:
-  - 인증/사용자 관리(Auth Server)와 이벤트/보상 관리(Event Server)를 분리
-  - 각 서비스의 독립적인 배포와 확장 가능
-  - 서비스별 장애 격리로 전체 시스템 안정성 향상
+* 서비스 분리로 독립 배포·확장·장애 격리
+* Auth·Event 모듈 단일 책임 원칙 강화
 
-### 2. 이벤트/보상 시스템 설계
+### MongoDB
 
-- **이벤트 상태 관리**:
+* 유연한 스키마로 이벤트·조건 필드 확장 용이
+* 게임 기획 변경에 따른 스키마 변경 용이
 
-  - DRAFT, ACTIVE, INACTIVE, COMPLETED 상태로 명확한 이벤트 라이프사이클 관리
-  - 이벤트 시작일/종료일 저장하여 이벤트 조건 검사등에 활용
+### REST + Message Pattern
 
-- **조건 검증 시스템**:
+* TCP, RabbitMQ, Kafka 등으로 손쉬운 전환
+* Command 기반 API 설계로 명확성 확보
 
-  - 다양한 조건 타입 지원 (CONTINUOUS_LOGIN, FRIEND_INVITE, CUSTOM)
-  - MongoDB Aggregation Pipeline을 활용한 효율적인 조건 검증
-  - 실패한 청구에 대한 상세 로깅 및 추적
+## 메시지 큐 구성
 
-- **보상 시스템**:
-  - POINT, ITEM, COUPON 등 다양한 보상 타입 지원
-  - 이벤트별 다중 보상 설정 가능
-  - 보상 지급 실패 시 재시도 메커니즘 구현 예정
+### RabbitMQ 적용
+* 도입배경
+  * 기존 TCP 통신 방식의 문제 발견
+    - 특정 서버 장애 시 메시지 유실 문제 발생
+    - 서비스 간 강한 결합도
+    - 장애 상황에서의 복구 어려움
 
-### 3. API 구조 선택
+```typescript
+// Gateway: Auth 모듈 설정 예시
+ClientsModule.registerAsync([
+  {
+    name: 'AUTH_SERVICE',
+    useFactory: (cfg: ConfigService) => ({
+      transport: Transport.RMQ,
+      options: { urls: [cfg.get('RABBITMQ_URI')], queue: 'auth' }
+    }),
+    inject: [ConfigService]
+  }
+]);
+```
 
-- **RESTful API + Message Pattern**:
-  - 마이크로서비스 간 통신을 위한 Message Pattern 사용
-  - 명확한 커맨드 기반의 API 설계 (create_reward, find_rewards_by_event 등)
-  - 간단한 설정 변경만으로 TCP, RMQ, Kafka 등으로 통신 방식 변경 가능
-    ![Image](https://github.com/user-attachments/assets/07c2fc55-d702-4d9b-b543-8fabb4e25475)
-  - ![Image](https://github.com/user-attachments/assets/5b1b6769-1dc2-42d2-874f-82ef6257820b)
-    ![Image](https://github.com/user-attachments/assets/c20475b9-7017-4f74-8bf8-41ac8f27f427)
-### 4. 데이터베이스 선택
+* `auth`, `event` 큐로 분리 서비스 간 결합도 완화
+* 서비스 서버 장애 발생 시에도 메시지 유실 방지
+* 서버 재기동 후 큐에 저장된 메시지 자동 처리
 
-- **MongoDB**:
-  - 기획이 변경되어도 유연한 스키마 설계 가능(필드 추가/삭제 용이)
-  - 스키마 유연성으로 다양한 이벤트 조건 저장 가능
+## KeySet 기반 페이징 전략 도입
 
-### 5. 보안 설계
-
-- **JWT 기반 인증**:
-  - Stateless 인증으로 서버 확장성 확보
-  - 별도의 세션 관리 필요 없음
-  - 다중 서버 환경에서도 유연하게 동작
-  - Role 기반 접근 제어 (OPERATOR, AUDITOR, ADMIN)
-  - API Gateway를 통한 중앙화된 인증/인가
-
-### 6. 메시지 큐 도입
-
-#### 6.1 도입 배경
-
-- TCP 기반 통신의 한계:
-  - 특정 서버 장애 시 메시지 유실 문제 발생
-  - 서비스 간 강한 결합도
-  - 장애 상황에서의 복구 어려움
-
-#### 6.2 RabbitMQ 구현
-- 아래와 같이 간단한 설정 변경만으로 TCP 방식에서 RabbitMQ 방식으로 변경 가능
-- **Gateway Server의 Auth Proxy Module**:
-
-  ```typescript
-  @Module({
-    imports: [
-      ClientsModule.registerAsync([
-        {
-          name: 'AUTH_SERVICE',
-          inject: [ConfigService],
-          useFactory: (configService: ConfigService) => ({
-            transport: Transport.RMQ,
-            options: {
-              urls: configService.getOrThrow('RABBITMQ_URI'),
-              queue: 'auth',
-            },
-          }),
-        },
-      ]),
-    ],
-  })
-  ```
-
-- **Auth Server의 메인 설정**:
-  ```typescript
-  const options: RmqOptions = {
-    transport: Transport.RMQ,
-    options: {
-      urls: configService.getOrThrow("RABBITMQ_URI"),
-      queue: "auth",
-    },
-  };
-  ```
-
-#### 6.3 메시지 큐 동작 방식
-
-- **메시지 지속성**:
-
-  - 서버 장애 시에도 메시지가 유실되지 않음
-  - 서버 재시작 시 자동으로 미처리된 메시지 처리
-
-- **서비스 간 통신**:
-  - Auth Service: 'auth' 큐를 통해 통신
-  - Event Service: 'event' 큐를 통해 통신
-  - Gateway Server: 두 큐 모두와 통신
-
-#### 6.4 장애 대응
-
-- **자동 복구**:
-
-  - 서버 장애 시에도 미처리된 메시지는 RabbitMQ에 보관
-  - 서버 재시작 시 자동으로 미처리된 메시지 처리
-  - 별도의 재시도 로직 없이도 메시지 처리 보장
-
-- **서비스 독립성**:
-  - 각 서비스는 독립적인 큐를 사용
-  - 서비스 장애가 다른 서비스에 영향을 주지 않음
-  - 비동기 처리로 시스템 안정성 향상
-
-
-
-### 7. keySet 페이징 도입
-- **기존 페이징 방식**:
-  - Offset 기반 페이징 (SKIP, LIMIT)
-  - SKIP 할 데이터를 메모리에 로드 하고 버리는 비효율적인 동작방식
-  - 데이터가 많아질수록 성능 저하 심화
+- **Offset 기반 페이징 (SKIP, LIMIT) 페이징 방식**:
+    - event, claim 을 findAll로 조회시 비효율 발생
+    - SKIP 할 데이터를 메모리에 로드 하고 버리는 비효율적인 동작방식
+    - 데이터가 많아질수록 성능 저하 심화
 
 - **keySet 기반 페이징**:
-  - 이전 페이지의 마지막 키를 기준으로 다음 페이지 조회
-  - 성능 향상 및 데이터 일관성 보장
-  - MongoDB의 `_id` 필드를 기준으로 구현
-  - 데이터가 많아지더라도 limit 만큼의 데이터만 메모리에 로드
-  - 몽고 db의 '_id' 필드는 시간순으로 정렬되어 있어, 최근 데이터를 쉽게 조회 가능 (별도의 createdAt 인덱싱 불필요)
+    - 이전 페이지의 마지막 키를 기준으로 다음 페이지 조회
+    - 데이터가 많아지더라도 limit 만큼의 데이터만 메모리에 로드
+    - MongoDB의 `_id` 필드를 기준으로 구현
+    - 몽고 db의 '_id' 필드는 시간정보가 포함되어 있어, 최근 데이터를 쉽게 조회 가능 (별도의 createdAt 인덱싱 불필요)
 
-### 8. 조건 검증 방식
-
-#### 8.1 조건 구조
+## 조건 검증 방식
+ - 출석 집계 모듈
+   - 중복 없는 출석일 체크를 위해 `attendanceDates` 필드에 년-월-일 형식으로 오늘 날짜를 추가
+   - `$addToSet` 연산자를 사용하여 중복된 날짜는 추가되지 않도록 처리
+   - 출석 집계 기간을 설정하기 위해 `startDate`와 `endDate`를 기준으로 출석일 수를 카운트
 ```typescript
-interface EventCondition {
-    type: ConditionType;    // 조건 타입 (CONTINUOUS_LOGIN, FRIEND_INVITE 등)
-    value: number;          // 조건 값 (횟수, 금액 등)
-    description: string;    // 조건 설명
-}
-
-export enum ConditionType {
-    CONTINUOUS_LOGIN = 'CONTINUOUS_LOGIN',
-    FRIEND_INVITE = 'FRIEND_INVITE',
-    CUSTOM = 'CUSTOM',
-    // 향후 확장 가능
-}
+// attendanceDates: string[]
+await this.userModel.updateOne(
+  { _id: userId },
+  { $addToSet: { attendanceDates: today } }
+);
 ```
 
-#### 8.2 확장성 고려사항
-- 새로운 조건 타입 추가가 용이한 구조
-- 각 조건 타입별 검증 로직 분리
-- 조건 값의 유연한 설정 가능
-
-### 9. 출석 집계 시스템
-
-#### 9.1 출석 데이터 저장
 ```typescript
-// User 스키마
-@Schema()
-export class User {
-    @Prop({ type: [String], default: [] })
-    attendanceDates: string[];
-}
-
-// 출석 기록 로직
-async recordAttendance(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);  // 시간 정보 제거
-
-    await this.userModel.updateOne(
-        { _id: userId },
-        { $addToSet: { attendanceDates: today } }  // 중복 제거하며 날짜 추가
-    );
-}
+const count = await this.userModel.aggregate([
+  { $match: { _id: ObjectId(userId) } },
+  { $unwind: '$attendanceDates' },
+  { $match: { attendanceDates: { $gte: startDate, $lte: endDate } } },
+  { $count: 'total' }
+]);
 ```
 
-#### 9.2 출석 횟수 집계
-```typescript
-async countAttendancesInPeriod(userId: string, startDate: Date, endDate: Date): Promise<number> {
-    // 시간 정보 제거
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+## 테스트 시나리오
+- 핵심 로직인 보상 요청에 대해 e2e test 수행
 
-    // 기간 내 출석 횟수 계산
-    const result = await this.userModel.aggregate([
-        // 해당 사용자 찾기
-        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+| 시나리오 | 내용                                                |
+| ---- | ------------------------------------------------- |
+| 1    | Admin/User 생성 → 이벤트·보상 생성 → User 보상 요청 → 승인/거절 검증 |
+| 2    | 중복 보상 요청 처리 → 거절 기록 검증                            |
 
-        // 배열 필드를 개별 문서로 분해
-        { $unwind: '$attendanceDates' },
-
-        // 날짜 범위 필터링
-        { $match: {
-            attendanceDates: {
-                $gte: startDate,
-                $lte: endDate
-            }
-        }},
-
-        // 개수 세기
-        { $count: 'total' }
-    ]);
-
-    return result.length > 0 ? result[0].total : 0;
-}
-```
-
-### 10. 핵심 로직인 보상 요청에 대해 e2e test 수행
-- 수행 방법
 ```bash
 cd e2e
-docker compose up e2e
+docker-compose up e2e
 ```
-- 시나리오1
-  - Admin User 생성
-  - 일반 User 생성
-  - Admin 이 이벤트 생성
-  - Admin 이벤트에 대한 보상 생성
-  - 일반 User가 이벤트에 대한 보상 요청
-  - 조건에 따라 보상 지급 여부 확인 및 승인 기록
 
-- 시나리오2
-  - 일반 User가 이벤트에 대한 보상 첫번째 요청
-  - 일반 User가 이벤트에 대한 보상 중복 요청
-  - 보상 지급 여부 확인 및 거절 기록
+## 향후 개선 사항
 
-
-### 11 향후 개선 사항
-- 출석 횟수 체크를 위한 효율적인 방법 구현
-- 보상 지급 처리 로직 구현
-- db 인덱스 최적화
-- 트랜잭션 적용
-- 단일 장애점 제거 (현재 : 게이트웨이 서버, 레빗mq )
-- 단위,통합 테스트 및 e2e 테스트 추가
-- responseDto 적용
+* 출석 집계 최적화 알고리즘 적용 (현재 집계 방식에서 대량의 요청시 성능저하 검증 필요)
+* MongoDB 인덱스 최적화
+* Gateway·RabbitMQ 단일 장애점 제거
+* 단위·통합·E2E 테스트 커버리지 확대
+* DTO/Response 구조 개선
