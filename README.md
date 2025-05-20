@@ -105,9 +105,9 @@ flowchart TB
 * JWT 기반 인증 (Bearer Token)
 * 헤더: `Authorization: Bearer <token>`
 * Role: `OPERATOR`, `AUDITOR`, `ADMIN` 등
-* 전역으로 JwtGuard를 설정해 기본 값으로 Private API 설정
+* Gateway에서 전역으로 JwtGuard를 설정해 기본 값으로 Private API 설정
 * IsPublic 데코레이터를 사용하여 Public API 설정
-* Gateway에서 Roles 데코레이터를 사용하여 유저의 권한확인후, API 접근 제어
+* Roles 데코레이터를 사용하여 유저의 권한확인후, API 접근 제어
 * 단점 : Gateway에서 모든 서비스의 엔드포인트에 대해 의존성이 생기는 문제 
 
 ## 설계 선택 이유
