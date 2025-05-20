@@ -1,3 +1,75 @@
+describe('Claims', () => {
+    let adminJwt = '';
+    let userJwt = '';
+    let eventId;
+    let rewardId;
+
+    beforeAll(async () => {
+        const adminUser = await createAdminUser();
+        const commonUser = await createCommonUser();
+        adminJwt = await getJwtTokenFrom(adminUser);
+        userJwt = await getJwtTokenFrom(commonUser);
+        eventId = await createEventFrom(adminJwt);
+        rewardId = await createRewardFrom(adminJwt,eventId);
+    });
+
+    test('조건에 맞을경우 요청은 승인되어야 한다.', async () => {
+        const claim = {
+            eventId: eventId,
+        }
+        const response = await fetch('http://gateway-server:3004/EVENT-SERVICE/claims', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminJwt}`,
+            },
+            body: JSON.stringify(claim),
+        });
+
+        const data = await response.json();
+        // console.log('Create Claim Response:', data);
+        expect(data).toBeDefined();
+        expect(data.status).toBe('APPROVED');
+        expect(data.eventId).toBe(eventId);
+        expect(data.rewards).toContain(rewardId);
+    });
+
+    test('중복된 요청은 거절되어야 한다.', async () => {
+        const claim = {
+            eventId: eventId,
+        }
+        const response1 = await fetch('http://gateway-server:3004/EVENT-SERVICE/claims', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminJwt}`,
+            },
+            body: JSON.stringify(claim),
+        });
+        const response2 = await fetch('http://gateway-server:3004/EVENT-SERVICE/claims', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminJwt}`,
+            },
+            body: JSON.stringify(claim),
+        });
+        const response3 = await fetch('http://gateway-server:3004/EVENT-SERVICE/claims/my', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminJwt}`,
+            },
+        });
+
+        const data = await response3.json();
+        const secondClaim = data[1];
+        expect(secondClaim).toBeDefined();
+        console.log('data.status', data.status);
+        expect(secondClaim.status).toBe('REJECTED');
+    });
+});
+
 async function createAdminUser() {
     const user = {
         username: 'maple-admin',
@@ -92,40 +164,3 @@ async function createRewardFrom(adminJwt, eventId) {
     const data = await response.json();
     return data._id;
 }
-
-describe('Claims', () => {
-    let adminJwt = '';
-    let userJwt = '';
-    let eventId;
-    let rewardId;
-
-    beforeAll(async () => {
-        const adminUser = await createAdminUser();
-        const commonUser = await createCommonUser();
-        adminJwt = await getJwtTokenFrom(adminUser);
-        userJwt = await getJwtTokenFrom(commonUser);
-        eventId = await createEventFrom(adminJwt);
-        rewardId = await createRewardFrom(adminJwt,eventId);
-    });
-
-    test('Create', async () => {
-        const claim = {
-            eventId: eventId,
-        }
-        const response = await fetch('http://gateway-server:3004/EVENT-SERVICE/claims', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminJwt}`,
-            },
-            body: JSON.stringify(claim),
-        });
-
-        const data = await response.json();
-        console.log('Create Claim Response:', data);
-        expect(data).toBeDefined();
-        expect(data.status).toBe('APPROVED');
-        expect(data.eventId).toBe(eventId);
-        expect(data.rewards).toContain(rewardId);
-    })
-});

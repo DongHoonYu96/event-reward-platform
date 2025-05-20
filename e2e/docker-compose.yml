@@ -5,7 +5,8 @@ services:
     volumes:
       - ./specs:/var/app/specs
     depends_on:
-      - mongodb
+      - mongodb-auth
+      - mongodb-event
       - rabbitmq
       - gateway-server
       - auth-server
@@ -13,9 +14,9 @@ services:
     networks:
       - event-network
 
-  mongodb:
+  mongodb-auth:
     image: mongo:latest
-    container_name: mongodb-e2e
+    container_name: mongodb-auth-e2e
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
@@ -23,13 +24,27 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_auth_data:/data/db
+    networks:
+      - event-network
+
+  mongodb-event:
+    image: mongo:latest
+    container_name: mongodb-event-e2e
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1234
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_event_data:/data/db
     networks:
       - event-network
 
   rabbitmq:
     image: rabbitmq:3-management  # 관리 GUI가 포함된 이미지
-    container_name: rabbitmq
+    container_name: rabbitmq-e2e
     ports:
       - "5672:5672"  # AMQP 프로토콜 포트
       - "15672:15672"  # 관리 UI 포트
@@ -50,7 +65,8 @@ services:
     env_file:
       - ../gateway-server/.env.docker
     depends_on:
-      - mongodb
+      - mongodb-auth
+      - mongodb-event
       - rabbitmq
     networks:
       - event-network
@@ -66,7 +82,7 @@ services:
     env_file:
       - ../auth-server/.env.docker
     depends_on:
-      - mongodb
+      - mongodb-auth
       - rabbitmq
     networks:
       - event-network
@@ -82,7 +98,7 @@ services:
     env_file:
       - ../event-server/.env.docker
     depends_on:
-      - mongodb
+      - mongodb-event
       - rabbitmq
     networks:
       - event-network
@@ -92,4 +108,5 @@ networks:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  mongodb_auth_data:
+  mongodb_event_data:

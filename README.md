@@ -318,7 +318,7 @@ async countAttendancesInPeriod(userId: string, startDate: Date, endDate: Date): 
 - 수행 방법
 ```bash
 cd e2e
-docker compose up -d
+docker compose up e2e
 ```
 - 시나리오
   - Admin User 생성
